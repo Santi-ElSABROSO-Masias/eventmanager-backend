@@ -1,0 +1,469 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------
+
+enum Role {
+  super_super_admin
+  super_admin
+  admin_contratista
+}
+
+enum QuotaStatus {
+  pending
+  approved
+  rejected
+}
+
+enum DayOfWeek {
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+  sunday
+}
+
+enum TrainingStatus {
+  active
+  inactive
+  suspended
+}
+
+enum MonthlyScheduleStatus {
+  draft
+  published
+  completed
+}
+
+enum RegistrationStatus {
+  registrado
+  pendiente
+  aprobado
+  rechazado
+  enviado
+  pending_link
+}
+
+enum ExamAccessType {
+  public
+  restricted
+}
+
+enum ExamStatus {
+  draft
+  published
+}
+
+enum QuestionType {
+  multiple
+}
+
+// ---------------------------------------------------------
+// MODELS
+// ---------------------------------------------------------
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique @db.VarChar(255)
+  password_hash String   @db.VarChar(255)
+  name          String   @db.VarChar(255)
+  role          Role
+  company_id    String?  @db.Uuid
+  company       Company? @relation(fields: [company_id], references: [id])
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+
+  // Relaciones
+  quota_changes       QuotaHistory[]
+  deadline_extensions Training[]        @relation("DeadlineExtension")
+  trainings_created   Training[]        @relation("TrainingCreator")
+  schedules_published MonthlySchedule[] @relation("SchedulePublisher")
+  registrations_made  Registration[]    @relation("RegistrationCreator")
+  approvals_level2    Registration[]    @relation("ApprovalLevel2")
+  approvals_level1    Registration[]    @relation("ApprovalLevel1")
+  audit_logs          AuditLog[]
+
+  // Autorizaciones
+  high_risk_requested HighRiskWorkAuth[]     @relation("HighRiskRequester")
+  high_risk_approved  HighRiskWorkAuth[]     @relation("HighRiskApprover")
+  licenses_requested  DrivingLicenseAuth[]   @relation("LicenseRequester")
+  licenses_approved   DrivingLicenseAuth[]   @relation("LicenseApprover")
+  vehicles_requested  VehicleAccreditation[] @relation("VehicleRequester")
+  vehicles_approved   VehicleAccreditation[] @relation("VehicleApprover")
+
+  @@index([role])
+  @@index([company_id])
+  @@map("users")
+}
+
+model Company {
+  id                   String       @id @default(uuid()) @db.Uuid
+  name                 String       @unique @db.VarChar(255)
+  contact_email        String?      @db.VarChar(255)
+  quota_max            Int          @default(0)
+  quota_used           Int          @default(0)
+  quota_requested      Int          @default(0)
+  quota_request_reason String?      @db.Text
+  quota_request_status QuotaStatus?
+  created_at           DateTime     @default(now())
+  updated_at           DateTime     @default(now()) @updatedAt
+
+  // Relaciones
+  users               User[]
+  quota_histories     QuotaHistory[]
+  exclusive_trainings Training[]
+
+  @@map("companies")
+}
+
+model QuotaHistory {
+  id           String   @id @default(uuid()) @db.Uuid
+  company_id   String   @db.Uuid
+  company      Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  action       String   @db.VarChar(50)
+  quota_before Int?
+  quota_after  Int?
+  changed_by   String?  @db.Uuid
+  user         User?    @relation(fields: [changed_by], references: [id])
+  reason       String?  @db.Text
+  created_at   DateTime @default(now())
+
+  @@map("quota_history")
+}
+
+model TrainingTemplate {
+  id                   String     @id @default(uuid()) @db.Uuid
+  name                 String     @db.VarChar(255)
+  duration_hours       Int
+  day_of_week          DayOfWeek?
+  start_time           DateTime   @db.Time()
+  end_time             DateTime   @db.Time()
+  max_capacity         Int        @default(60)
+  is_active_by_default Boolean    @default(true)
+  week_of_month        Int?       @default(2)
+  is_multi_day         Boolean    @default(false)
+  multi_day_count      Int        @default(1)
+  created_at           DateTime   @default(now())
+
+  // Relaciones
+  trainings Training[]
+
+  @@map("training_templates")
+}
+
+model Training {
+  id             String   @id @default(uuid()) @db.Uuid
+  title          String   @db.VarChar(255)
+  description    String?  @db.Text
+  start_date     DateTime @db.Timestamp()
+  start_time     DateTime @db.Time()
+  end_time       DateTime @db.Time()
+  max_capacity   Int      @default(60)
+  duration_hours Int?
+  color          String?  @db.VarChar(7)
+  group_number   Int?
+
+  // Deadline
+  registration_deadline     DateTime  @db.Timestamp()
+  deadline_extended_at      DateTime? @db.Timestamp()
+  deadline_extended_by      String?   @db.Uuid
+  extended_by_user          User?     @relation("DeadlineExtension", fields: [deadline_extended_by], references: [id])
+  deadline_extension_reason String?   @db.Text
+
+  // Teams Link
+  meeting_link String? @db.Text
+
+  // Estado
+  status       TrainingStatus @default(active)
+  is_active    Boolean        @default(true)
+  is_published Boolean        @default(false)
+
+  // Relaciones
+  template_id         String?           @db.Uuid
+  template            TrainingTemplate? @relation(fields: [template_id], references: [id])
+  monthly_schedule_id String?           @db.Uuid
+  monthly_schedule    MonthlySchedule?  @relation(fields: [monthly_schedule_id], references: [id])
+  company_id          String?           @db.Uuid
+  company             Company?          @relation(fields: [company_id], references: [id])
+
+  // Auditoría
+  created_by String?  @db.Uuid
+  creator    User?    @relation("TrainingCreator", fields: [created_by], references: [id])
+  created_at DateTime @default(now()) @db.Timestamp()
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamp()
+
+  // Colecciones
+  registrations Registration[]
+  exams         Exam[]
+
+  @@index([start_date])
+  @@index([status])
+  @@index([company_id])
+  @@map("trainings")
+}
+
+model MonthlySchedule {
+  id           String                @id @default(uuid()) @db.Uuid
+  month        Int // CHECK (month BETWEEN 1 AND 12) done in code
+  year         Int
+  status       MonthlyScheduleStatus @default(draft)
+  generated_at DateTime              @default(now()) @db.Timestamp()
+  published_at DateTime?             @db.Timestamp()
+  published_by String?               @db.Uuid
+  publisher    User?                 @relation("SchedulePublisher", fields: [published_by], references: [id])
+
+  trainings Training[]
+
+  @@unique([month, year])
+  @@map("monthly_schedules")
+}
+
+model Registration {
+  id          String   @id @default(uuid()) @db.Uuid
+  training_id String   @db.Uuid
+  training    Training @relation(fields: [training_id], references: [id], onDelete: Cascade)
+
+  // Datos trabajador
+  full_name    String  @db.VarChar(255)
+  dni          String  @db.VarChar(20)
+  email        String  @db.VarChar(255)
+  phone        String  @db.VarChar(50)
+  organization String  @db.VarChar(255)
+  area         String? @db.VarChar(255)
+  role         String? @db.VarChar(255)
+  brevete      String? @db.VarChar(50)
+
+  // Validación de identidad
+  identity_validated   Boolean   @default(false)
+  validation_date      DateTime? @db.Timestamp()
+  validation_link      String?   @unique @db.Text
+  validation_token     String?   @unique @db.VarChar(255)
+  validation_completed Boolean   @default(false)
+  dni_photo_url        String?   @db.Text
+  selfie_photo_url     String?   @db.Text
+
+  // Estado
+  status RegistrationStatus @default(registrado)
+
+  // Aprobaciones
+  approved_by_level2 String?   @db.Uuid
+  approver_level2    User?     @relation("ApprovalLevel2", fields: [approved_by_level2], references: [id])
+  approved_at_level2 DateTime? @db.Timestamp()
+
+  approved_by_level1 String?   @db.Uuid
+  approver_level1    User?     @relation("ApprovalLevel1", fields: [approved_by_level1], references: [id])
+  approved_at_level1 DateTime? @db.Timestamp()
+
+  rejection_reason String? @db.Text
+
+  // Asistencia
+  attended     Boolean @default(false)
+  meeting_link String? @db.Text
+
+  // Auditoría
+  registered_by String?  @db.Uuid
+  registerer    User?    @relation("RegistrationCreator", fields: [registered_by], references: [id])
+  registered_at DateTime @default(now()) @db.Timestamp()
+  updated_at    DateTime @default(now()) @updatedAt @db.Timestamp()
+
+  @@unique([training_id, dni])
+  @@index([status])
+  @@index([training_id])
+  @@index([dni])
+  @@map("registrations")
+}
+
+model Exam {
+  id          String   @id @default(uuid()) @db.Uuid
+  training_id String   @db.Uuid
+  training    Training @relation(fields: [training_id], references: [id], onDelete: Cascade)
+
+  time_limit        Int @default(30)
+  min_passing_score Int @default(70)
+
+  access_type       ExamAccessType @default(public)
+  requires_password Boolean        @default(false)
+  password_hash     String?        @db.VarChar(255)
+
+  require_name         Boolean @default(true)
+  require_dni          Boolean @default(true)
+  require_email        Boolean @default(false)
+  require_organization Boolean @default(false)
+
+  is_published Boolean @default(false)
+  public_link  String? @unique @db.Text
+
+  status     ExamStatus @default(draft)
+  created_at DateTime   @default(now()) @db.Timestamp()
+  updated_at DateTime   @default(now()) @updatedAt @db.Timestamp()
+
+  questions Question[]
+  results   ExamResult[]
+
+  @@map("exams")
+}
+
+model Question {
+  id             String       @id @default(uuid()) @db.Uuid
+  exam_id        String       @db.Uuid
+  exam           Exam         @relation(fields: [exam_id], references: [id], onDelete: Cascade)
+  text           String       @db.Text
+  type           QuestionType @default(multiple)
+  option_a       String       @db.Text
+  option_b       String       @db.Text
+  option_c       String       @db.Text
+  option_d       String       @db.Text
+  correct_answer Int // CHECK 0-3
+  training_tag   String?      @db.VarChar(255)
+  order_index    Int?
+  created_at     DateTime     @default(now()) @db.Timestamp()
+
+  @@index([exam_id])
+  @@map("questions")
+}
+
+model ExamResult {
+  id               String   @id @default(uuid()) @db.Uuid
+  exam_id          String   @db.Uuid
+  exam             Exam     @relation(fields: [exam_id], references: [id], onDelete: Cascade)
+  participant_name String   @db.VarChar(255)
+  dni              String   @db.VarChar(20)
+  email            String?  @db.VarChar(255)
+  organization     String?  @db.VarChar(255)
+  score            Int
+  passed           Boolean
+  answers          Json?
+  completed_at     DateTime @default(now()) @db.Timestamp()
+
+  @@unique([exam_id, dni])
+  @@index([exam_id])
+  @@map("exam_results")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String?  @db.Uuid
+  user        User?    @relation(fields: [user_id], references: [id])
+  action      String   @db.VarChar(100)
+  entity_type String?  @db.VarChar(50)
+  entity_id   String?  @db.Uuid
+  details     Json?
+  ip_address  String?  @db.VarChar(45)
+  user_agent  String?  @db.Text
+  created_at  DateTime @default(now()) @db.Timestamp()
+
+  @@index([user_id])
+  @@index([action])
+  @@index([created_at(sort: Desc)])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------
+// AUTHORIZATIONS MODULE
+// ---------------------------------------------------------
+
+enum AuthStatus {
+  pending
+  approved
+  rejected
+}
+
+model HighRiskWorkAuth {
+  id             String   @id @default(uuid()) @db.Uuid
+  worker_id      String   @db.Uuid
+  worker_name    String   @db.VarChar(255)
+  dni            String   @db.VarChar(20)
+  company        String   @db.VarChar(255)
+  work_type      String   @db.VarChar(100)
+  location       String   @db.VarChar(255)
+  date_requested DateTime @default(now()) @db.Timestamp()
+  date_needed    DateTime @db.Timestamp()
+
+  // Documents
+  medical_cert_url  String? @db.Text
+  training_cert_url String? @db.Text
+
+  status           AuthStatus @default(pending)
+  rejection_reason String?    @db.Text
+
+  // Auditoría
+  requested_by String?   @db.Uuid
+  requester    User?     @relation("HighRiskRequester", fields: [requested_by], references: [id])
+  approved_by  String?   @db.Uuid
+  approver     User?     @relation("HighRiskApprover", fields: [approved_by], references: [id])
+  approved_at  DateTime? @db.Timestamp()
+
+  @@index([status])
+  @@index([dni])
+  @@map("auth_high_risk_works")
+}
+
+model DrivingLicenseAuth {
+  id               String   @id @default(uuid()) @db.Uuid
+  worker_id        String   @db.Uuid
+  worker_name      String   @db.VarChar(255)
+  dni              String   @db.VarChar(20)
+  company          String   @db.VarChar(255)
+  license_number   String   @db.VarChar(50)
+  license_category String   @db.VarChar(50)
+  expiration_date  DateTime @db.Timestamp()
+
+  // Documents
+  license_front_url String? @db.Text
+  license_back_url  String? @db.Text
+
+  status           AuthStatus @default(pending)
+  rejection_reason String?    @db.Text
+
+  // Auditoría
+  requested_by String?   @db.Uuid
+  requester    User?     @relation("LicenseRequester", fields: [requested_by], references: [id])
+  approved_by  String?   @db.Uuid
+  approver     User?     @relation("LicenseApprover", fields: [approved_by], references: [id])
+  approved_at  DateTime? @db.Timestamp()
+
+  @@index([status])
+  @@index([dni])
+  @@map("auth_driving_licenses")
+}
+
+model VehicleAccreditation {
+  id           String @id @default(uuid()) @db.Uuid
+  plate_number String @unique @db.VarChar(20)
+  company      String @db.VarChar(255)
+  vehicle_type String @db.VarChar(100)
+  brand        String @db.VarChar(100)
+  model        String @db.VarChar(100)
+  year         Int
+
+  // Documents
+  soat_url          String?   @db.Text
+  soat_expiration   DateTime? @db.Timestamp()
+  rtv_url           String?   @db.Text
+  rtv_expiration    DateTime? @db.Timestamp()
+  property_card_url String?   @db.Text
+
+  status           AuthStatus @default(pending)
+  rejection_reason String?    @db.Text
+
+  // Auditoría
+  requested_by String?   @db.Uuid
+  requester    User?     @relation("VehicleRequester", fields: [requested_by], references: [id])
+  approved_by  String?   @db.Uuid
+  approver     User?     @relation("VehicleApprover", fields: [approved_by], references: [id])
+  approved_at  DateTime? @db.Timestamp()
+
+  @@index([status])
+  @@index([plate_number])
+  @@map("auth_vehicles")
+}

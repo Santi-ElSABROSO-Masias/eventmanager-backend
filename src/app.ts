@@ -1,0 +1,52 @@
+import express, { Express, Request, Response, NextFunction } from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import { env } from './config/env';
+
+const app: Express = express();
+
+// Middleware
+app.use(cors({
+    origin: env.CORS_ORIGIN || 'http://localhost:3000', // Restricción CORS estricta requerida por seguridad VPS
+    credentials: true, // Permitir auth headers
+}));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Health Check
+app.get('/health', (req: Request, res: Response) => {
+    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+import authRoutes from './modules/auth/auth.routes';
+import usersRoutes from './modules/users/users.routes';
+import companiesRoutes from './modules/companies/companies.routes';
+import trainingsRoutes from './modules/trainings/trainings.routes';
+import schedulesRoutes from './modules/trainings/schedules.routes';
+import registrationsRoutes from './modules/registrations/registrations.routes';
+import validationRoutes from './modules/registrations/validation.routes';
+import examsRoutes from './modules/exams/exams.routes';
+import authorizationsRoutes from './modules/authorizations/authorizations.routes';
+
+// Import and use routes here
+app.use('/api/auth', authRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/companies', companiesRoutes);
+app.use('/api/trainings', trainingsRoutes);
+app.use('/api/schedules', schedulesRoutes);
+app.use('/api/registrations', registrationsRoutes);
+app.use('/api/validation', validationRoutes);
+app.use('/api/exams', examsRoutes);
+app.use('/api/authorizations', authorizationsRoutes);
+
+// Global Error Handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error(err.stack);
+    res.status(err.status || 500).json({
+        success: false,
+        message: err.message || 'Internal Server Error',
+    });
+});
+
+export default app;

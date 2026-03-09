@@ -1,0 +1,25 @@
+# Ignorar carpetas pesadas para acelerar el build en Docker
+node_modules/
+dist/
+
+# Ignorar archivos locales que no van al servidor
+.env
+.env.local
+.git/
+.gitignore
+
+# Ignorar logs locales
+*.log
+npm-debug.log*
+
+# Ignorar db local si la hay
+prisma/*.db
+prisma/*.db-journal
+
+# VSCode y otros editores
+.vscode/
+
+# Build assets
+Dockerfile
+docker-compose.yml
+.dockerignore

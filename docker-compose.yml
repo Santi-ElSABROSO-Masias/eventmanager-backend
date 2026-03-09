@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14-alpine
+    container_name: pueba_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-securepassword123}
+      POSTGRES_DB: ${POSTGRES_DB:-puebacath_db}
+    # Solo está disponible dentro de la red interna 'backend-network'
+    # No exponemos 'ports: "5432:5432"' para seguridad máxima en VPS
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend-network
+    # Limitación de Recursos para prevenir ataques DoS agotando la BD
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pueba_api
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-securepassword123}@db:5432/${POSTGRES_DB:-puebacath_db}?schema=public
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
+      - PORT=3000
+      - FRONTEND_URL=${FRONTEND_URL}
+    # MUY IMPORTANTE: NO mapeamos 'ports: "3000:3000"' 
+    # Nginx en la maquina host o en otro contenedor accederá vía 'api:3000' en la red
+    depends_on:
+      - db
+    networks:
+      - backend-network
+    # Limitación de Recursos para prevenir ataques DoS (agotamiento RAM de Node)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+volumes:
+  postgres_data:
+
+
+networks:
+  backend-network:
+    driver: bridge
