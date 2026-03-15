@@ -4,11 +4,17 @@ import { validate } from '../../middlewares/validation.middleware';
 import { authenticate } from '../../middlewares/auth.middleware';
 import { authorize } from '../../middlewares/roles.middleware';
 import { createHighRiskWorkSchema, createDrivingLicenseSchema, createVehicleSchema, authApprovalSchema } from './dto/authorizations.dto';
+import multer from 'multer';
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 const authController = new AuthorizationsController();
 
 router.use(authenticate);
+
+// --- File Uploads ---
+router.post('/upload', authorize('super_super_admin', 'admin_contratista'), upload.single('file'), authController.uploadFile);
 
 // --- High Risk Work ---
 router.post('/high-risk', authorize('super_super_admin', 'admin_contratista'), validate(createHighRiskWorkSchema), authController.createHighRiskWork);

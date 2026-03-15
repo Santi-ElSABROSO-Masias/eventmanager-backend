@@ -1,9 +1,47 @@
 import { Request, Response } from 'express';
 import { AuthorizationsService } from './authorizations.service';
 import { CreateHighRiskWorkDto, CreateDrivingLicenseDto, CreateVehicleDto, AuthApprovalDto } from './dto/authorizations.dto';
+import { createClient } from '@supabase/supabase-js';
+import { env } from '../../config/env';
 
 export class AuthorizationsController {
     private authService = new AuthorizationsService();
+
+    // --- File Uploads ---
+    uploadFile = async (req: Request, res: Response): Promise<void> => {
+        try {
+            if (!req.file) throw new Error('No se recibió archivo');
+
+            const supabaseUrl = process.env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
+            const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY || '';
+            if (!supabaseUrl || !supabaseKey) throw new Error('Faltan credenciales de Supabase en el Backend');
+
+            const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+            const file = req.file;
+            const fileExt = file.originalname.split('.').pop();
+            const fileName = `${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { data, error } = await supabaseClient.storage
+                .from('autorizaciones')
+                .upload(filePath, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: false
+                });
+
+            if (error) throw error;
+
+            const { data: urlData } = supabaseClient.storage
+                .from('autorizaciones')
+                .getPublicUrl(filePath);
+
+            res.json({ success: true, url: urlData.publicUrl, name: file.originalname });
+        } catch (error: any) {
+            console.error('Upload Error:', error);
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
 
     // --- High Risk Work ---
     createHighRiskWork = async (req: Request, res: Response) => {
@@ -33,7 +71,15 @@ export class AuthorizationsController {
             const data: AuthApprovalDto = req.body;
             const userId = (req as any).user!.id;
             const result = await this.authService.approveHighRiskWork(id, data, userId);
-            res.json({ success: true, data: result });
+
+            if (result.pdfBuffer) {
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename=Autorizacion_${id}.pdf`);
+                res.status(200).send(result.pdfBuffer);
+                return;
+            }
+
+            res.json({ success: true, data: result.record });
         } catch (error: any) {
             res.status(400).json({ success: false, message: error.message });
         }

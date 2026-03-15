@@ -1,5 +1,7 @@
 import prisma from '../../config/db';
 import { CreateHighRiskWorkDto, CreateDrivingLicenseDto, CreateVehicleDto, AuthApprovalDto } from './dto/authorizations.dto';
+import { generateAuthorizationPDF } from './utils/pdfGenerator';
+import { randomUUID } from 'crypto';
 
 export class AuthorizationsService {
     // --- High Risk Work ---
@@ -29,15 +31,64 @@ export class AuthorizationsService {
     }
 
     async approveHighRiskWork(id: string, data: AuthApprovalDto, userId: string) {
-        return prisma.highRiskWorkAuth.update({
+        const record = await prisma.highRiskWorkAuth.findUnique({ where: { id } });
+        if (!record) throw new Error('Solicitud no encontrada');
+
+        let rejection_reason = data.rejection_reason || record.rejection_reason;
+        let pdfBuffer: Buffer | null = null;
+        const TIPOS_REQUIEREN_EMO = ['Altura', 'Caliente', 'Espacio Confinado'];
+
+        if (data.status === 'approved') {
+            const tiposTrabajo = data.tiposTrabajo || [];
+            const requiresEMO = tiposTrabajo.some((t: string) => TIPOS_REQUIEREN_EMO.includes(t));
+
+            if (requiresEMO && (!data.fechaEMO || !data.vigencia)) {
+                throw new Error('Fecha EMO y Vigencia son requeridos para estas habilitaciones');
+            }
+
+            let jsonPayload: any = {};
+            try { if (rejection_reason) jsonPayload = JSON.parse(rejection_reason); } catch { }
+
+            jsonPayload.estadoUI = 'APROBADO';
+            if (data.fechaCapacitacion) jsonPayload.fechaCapacitacion = data.fechaCapacitacion;
+            if (data.fechaEMO) jsonPayload.fechaEMO = data.fechaEMO;
+            if (data.vigencia) jsonPayload.vigencia = data.vigencia;
+            if (data.tiposTrabajo) jsonPayload.tiposTrabajo = data.tiposTrabajo;
+
+            const historyLog = {
+                id: randomUUID(),
+                actor: 'Gerencia SSO',
+                rol: 'Aprobador',
+                accion: 'Aprobación Final con Vigencia',
+                fecha: new Date().toISOString()
+            };
+            jsonPayload.historial = [...(jsonPayload.historial || []), historyLog];
+            rejection_reason = JSON.stringify(jsonPayload);
+
+            const vigenciaFinal = requiresEMO ? data.vigencia! : 'Hasta finalizar obra/tarea';
+
+            pdfBuffer = generateAuthorizationPDF({
+                nombre: record.worker_name,
+                dni: record.dni,
+                empresa: record.company,
+                tiposTrabajo: tiposTrabajo.length > 0 ? tiposTrabajo : (jsonPayload.tiposTrabajo || []),
+                vigencia: vigenciaFinal,
+                codigoUnico: id.split('-').pop() || '0000',
+                fechaEmision: new Date().toISOString().split('T')[0]
+            });
+        }
+
+        const updated = await prisma.highRiskWorkAuth.update({
             where: { id },
             data: {
-                status: data.status,
-                rejection_reason: data.rejection_reason,
+                status: data.status as any,
+                rejection_reason,
                 approved_by: userId,
                 approved_at: new Date()
             }
         });
+
+        return { record: updated, pdfBuffer };
     }
 
     // --- Driving Licenses ---
