@@ -33,7 +33,7 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
 
 # Only expose the internal port for compose network (doesn't map to host automatically)
-EXPOSE 3000
+EXPOSE 4000
 
 # Start command
 CMD ["npm", "start"]
