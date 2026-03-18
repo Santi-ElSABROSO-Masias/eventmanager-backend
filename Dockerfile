@@ -1,5 +1,5 @@
 # Use official Node.js Alpine image for a lightweight, secure base
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Set working directory inside container
 WORKDIR /app
@@ -23,7 +23,7 @@ COPY . .
 RUN npm run build
 
 # --- Production Image ---
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 # Copy node_modules & dist from builder
