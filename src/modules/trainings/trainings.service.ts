@@ -4,27 +4,50 @@ import { sendSystemNotification } from '../induccion-temporal/utils/mailer';
 
 export class TrainingsService {
     async create(data: CreateTrainingDto, userId: string) {
-        return prisma.training.create({
-            data: {
-                title: data.title,
-                description: data.description,
-                start_date: new Date(data.start_date),
-                start_time: new Date(`1970-01-01T${data.start_time}:00Z`),
-                end_time: new Date(`1970-01-01T${data.end_time}:00Z`),
-                max_capacity: data.max_capacity,
-                duration_hours: data.duration_hours,
-                color: data.color,
-                group_number: data.group_number,
-                registration_deadline: new Date(data.registration_deadline),
-                meeting_link: data.meeting_link,
-                status: data.status,
-                is_active: data.is_active,
-                is_published: data.is_published,
-                template_id: data.template_id,
-                company_id: data.company_id,
-                created_by: userId,
+        try {
+            console.log('Create training - Datos recibidos:', JSON.stringify(data, null, 2));
+            
+            // FIX 1: Validar meeting_link - enviar undefined si es URL inválida o vacío
+            let meetingLink = data.meeting_link;
+            if (meetingLink) {
+                try {
+                    new URL(meetingLink);
+                } catch {
+                    console.warn('URL de meeting_link inválida, enviando undefined:', meetingLink);
+                    meetingLink = undefined;
+                }
+            } else if (meetingLink === '') {
+                meetingLink = undefined;
             }
-        });
+            
+            const training = await prisma.training.create({
+                data: {
+                    title: data.title,
+                    description: data.description,
+                    start_date: new Date(data.start_date),
+                    start_time: new Date(`1970-01-01T${data.start_time}:00Z`),
+                    end_time: new Date(`1970-01-01T${data.end_time}:00Z`),
+                    max_capacity: data.max_capacity,
+                    duration_hours: data.duration_hours,
+                    color: data.color,
+                    group_number: data.group_number,
+                    registration_deadline: new Date(data.registration_deadline),
+                    meeting_link: meetingLink,
+                    status: data.status,
+                    is_active: data.is_active,
+                    is_published: data.is_published,
+                    template_id: data.template_id,
+                    company_id: data.company_id,
+                    created_by: userId,
+                }
+            });
+            
+            console.log('Training creado exitosamente:', training.id);
+            return training;
+        } catch (error) {
+            console.error('Error exacto en create:', JSON.stringify(error, null, 2));
+            throw error;
+        }
     }
 
     async findAll(filters: any) {
