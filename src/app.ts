@@ -7,6 +7,9 @@ import { env } from './config/env';
 
 const app: Express = express();
 
+// CRITICAL: Confiar en el proxy (necesario para Easypanel y X-Forwarded-For en express-rate-limit)
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
