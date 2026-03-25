@@ -28,7 +28,7 @@ export class TrainingsService {
     }
 
     async findAll(filters: any) {
-        const where: any = {};
+        const where: any = { is_active: true };
         if (filters.status) where.status = filters.status;
         if (filters.companyId) where.company_id = filters.companyId;
 
