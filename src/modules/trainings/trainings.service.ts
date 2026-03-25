@@ -73,48 +73,53 @@ export class TrainingsService {
 
         const justPublished = existing.is_published === false && updatedTraining.is_published === true;
         if (justPublished) {
-            const contractorAdmins = await prisma.user.findMany({
-                where: { role: 'admin_contratista', is_active: true },
-                select: { email: true, name: true }
-            });
+            try {
+                const contractorAdmins = await prisma.user.findMany({
+                    where: { role: 'admin_contratista', is_active: true },
+                    select: { email: true, name: true }
+                });
 
-            for (const admin of contractorAdmins) {
-                const subject = `Nueva capacitación disponible - ${updatedTraining.title}`;
-                const html = `
-                    <div style="font-family: Arial, sans-serif; color: #334155;">
-                      <h3 style="color:#10b981;">📚 Nueva capacitación disponible: ${updatedTraining.title}</h3>
-                      <p>Fecha: <strong>${updatedTraining.start_date.toISOString().split('T')[0]}</strong></p>
-                      <p>Cupos: <strong>${updatedTraining.max_capacity}</strong></p>
-                      <p>Ingresa a la plataforma para inscribir a tus trabajadores.</p>
-                    </div>
-                `;
+                for (const admin of contractorAdmins) {
+                    const subject = `Nueva capacitación disponible - ${updatedTraining.title}`;
+                    const html = `
+                        <div style="font-family: Arial, sans-serif; color: #334155;">
+                          <h3 style="color:#10b981;">📚 Nueva capacitación disponible: ${updatedTraining.title}</h3>
+                          <p>Fecha: <strong>${updatedTraining.start_date.toISOString().split('T')[0]}</strong></p>
+                          <p>Cupos: <strong>${updatedTraining.max_capacity}</strong></p>
+                          <p>Ingresa a la plataforma para inscribir a tus trabajadores.</p>
+                        </div>
+                    `;
 
-                try {
-                    await sendSystemNotification(admin.email, subject, html);
-                    await prisma.systemNotification.create({
-                        data: {
-                            training_id: updatedTraining.id,
-                            type: 'new_training_published',
-                            status: 'sent',
-                            recipient_email: admin.email,
-                            subject,
-                            body_html: html,
-                            sent_at: new Date()
-                        }
-                    });
-                } catch (error) {
-                    await prisma.systemNotification.create({
-                        data: {
-                            training_id: updatedTraining.id,
-                            type: 'new_training_published',
-                            status: 'failed',
-                            recipient_email: admin.email,
-                            subject,
-                            body_html: html
-                        }
-                    });
-                    console.error('Error sending new_training_published notification:', error);
+                    try {
+                        await sendSystemNotification(admin.email, subject, html);
+                        await prisma.systemNotification.create({
+                            data: {
+                                training_id: updatedTraining.id,
+                                type: 'new_training_published',
+                                status: 'sent',
+                                recipient_email: admin.email,
+                                subject,
+                                body_html: html,
+                                sent_at: new Date()
+                            }
+                        });
+                    } catch (error) {
+                        await prisma.systemNotification.create({
+                            data: {
+                                training_id: updatedTraining.id,
+                                type: 'new_training_published',
+                                status: 'failed',
+                                recipient_email: admin.email,
+                                subject,
+                                body_html: html
+                            }
+                        });
+                        console.error('Error sending new_training_published notification:', error);
+                    }
                 }
+            } catch (notifError) {
+                console.error('Notificación falló, continuando...', notifError);
+                // NO relanzar el error - el update se completará de todas formas
             }
         }
 
