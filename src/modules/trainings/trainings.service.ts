@@ -1,5 +1,6 @@
 import prisma from '../../config/db';
 import { CreateTrainingDto, UpdateTrainingDto, ExtendDeadlineDto, DuplicateDto } from './dto/trainings.dto';
+import { sendSystemNotification } from '../induccion-temporal/utils/mailer';
 
 export class TrainingsService {
     async create(data: CreateTrainingDto, userId: string) {
@@ -56,16 +57,68 @@ export class TrainingsService {
     }
 
     async update(id: string, data: UpdateTrainingDto) {
+        const existing = await prisma.training.findUnique({ where: { id } });
+        if (!existing) throw new Error('Capacitación no encontrada');
+
         const updateData: any = { ...data };
         if (data.start_date) updateData.start_date = new Date(data.start_date);
         if (data.registration_deadline) updateData.registration_deadline = new Date(data.registration_deadline);
         if (data.start_time) updateData.start_time = new Date(`1970-01-01T${data.start_time}:00Z`);
         if (data.end_time) updateData.end_time = new Date(`1970-01-01T${data.end_time}:00Z`);
 
-        return prisma.training.update({
+        const updatedTraining = await prisma.training.update({
             where: { id },
             data: updateData
         });
+
+        const justPublished = existing.is_published === false && updatedTraining.is_published === true;
+        if (justPublished) {
+            const contractorAdmins = await prisma.user.findMany({
+                where: { role: 'admin_contratista', is_active: true },
+                select: { email: true, name: true }
+            });
+
+            for (const admin of contractorAdmins) {
+                const subject = `Nueva capacitación disponible - ${updatedTraining.title}`;
+                const html = `
+                    <div style="font-family: Arial, sans-serif; color: #334155;">
+                      <h3 style="color:#10b981;">📚 Nueva capacitación disponible: ${updatedTraining.title}</h3>
+                      <p>Fecha: <strong>${updatedTraining.start_date.toISOString().split('T')[0]}</strong></p>
+                      <p>Cupos: <strong>${updatedTraining.max_capacity}</strong></p>
+                      <p>Ingresa a la plataforma para inscribir a tus trabajadores.</p>
+                    </div>
+                `;
+
+                try {
+                    await sendSystemNotification(admin.email, subject, html);
+                    await prisma.systemNotification.create({
+                        data: {
+                            training_id: updatedTraining.id,
+                            type: 'new_training_published',
+                            status: 'sent',
+                            recipient_email: admin.email,
+                            subject,
+                            body_html: html,
+                            sent_at: new Date()
+                        }
+                    });
+                } catch (error) {
+                    await prisma.systemNotification.create({
+                        data: {
+                            training_id: updatedTraining.id,
+                            type: 'new_training_published',
+                            status: 'failed',
+                            recipient_email: admin.email,
+                            subject,
+                            body_html: html
+                        }
+                    });
+                    console.error('Error sending new_training_published notification:', error);
+                }
+            }
+        }
+
+        return updatedTraining;
     }
 
     async extendDeadline(id: string, data: ExtendDeadlineDto, userId: string) {

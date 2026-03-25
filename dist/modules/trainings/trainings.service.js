@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TrainingsService = void 0;
 const db_1 = __importDefault(require("../../config/db"));
+const mailer_1 = require("../induccion-temporal/utils/mailer");
 class TrainingsService {
     async create(data, userId) {
         return db_1.default.training.create({
@@ -58,6 +59,9 @@ class TrainingsService {
         });
     }
     async update(id, data) {
+        const existing = await db_1.default.training.findUnique({ where: { id } });
+        if (!existing)
+            throw new Error('Capacitación no encontrada');
         const updateData = { ...data };
         if (data.start_date)
             updateData.start_date = new Date(data.start_date);
@@ -67,10 +71,56 @@ class TrainingsService {
             updateData.start_time = new Date(`1970-01-01T${data.start_time}:00Z`);
         if (data.end_time)
             updateData.end_time = new Date(`1970-01-01T${data.end_time}:00Z`);
-        return db_1.default.training.update({
+        const updatedTraining = await db_1.default.training.update({
             where: { id },
             data: updateData
         });
+        const justPublished = existing.is_published === false && updatedTraining.is_published === true;
+        if (justPublished) {
+            const contractorAdmins = await db_1.default.user.findMany({
+                where: { role: 'admin_contratista', is_active: true },
+                select: { email: true, name: true }
+            });
+            for (const admin of contractorAdmins) {
+                const subject = `Nueva capacitación disponible - ${updatedTraining.title}`;
+                const html = `
+                    <div style="font-family: Arial, sans-serif; color: #334155;">
+                      <h3 style="color:#10b981;">📚 Nueva capacitación disponible: ${updatedTraining.title}</h3>
+                      <p>Fecha: <strong>${updatedTraining.start_date.toISOString().split('T')[0]}</strong></p>
+                      <p>Cupos: <strong>${updatedTraining.max_capacity}</strong></p>
+                      <p>Ingresa a la plataforma para inscribir a tus trabajadores.</p>
+                    </div>
+                `;
+                try {
+                    await (0, mailer_1.sendSystemNotification)(admin.email, subject, html);
+                    await db_1.default.systemNotification.create({
+                        data: {
+                            training_id: updatedTraining.id,
+                            type: 'new_training_published',
+                            status: 'sent',
+                            recipient_email: admin.email,
+                            subject,
+                            body_html: html,
+                            sent_at: new Date()
+                        }
+                    });
+                }
+                catch (error) {
+                    await db_1.default.systemNotification.create({
+                        data: {
+                            training_id: updatedTraining.id,
+                            type: 'new_training_published',
+                            status: 'failed',
+                            recipient_email: admin.email,
+                            subject,
+                            body_html: html
+                        }
+                    });
+                    console.error('Error sending new_training_published notification:', error);
+                }
+            }
+        }
+        return updatedTraining;
     }
     async extendDeadline(id, data, userId) {
         return db_1.default.training.update({

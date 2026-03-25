@@ -6,14 +6,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RegistrationsService = void 0;
 const db_1 = __importDefault(require("../../config/db"));
 const crypto_1 = __importDefault(require("crypto"));
+const mailer_1 = require("../induccion-temporal/utils/mailer");
 class RegistrationsService {
     async create(data, userId) {
         const training = await db_1.default.training.findUnique({
             where: { id: data.training_id },
-            include: { company: true }
+            include: {
+                company: true,
+                _count: { select: { registrations: true } }
+            }
         });
         if (!training) {
             throw new Error('Capacitación no encontrada');
+        }
+        if (training._count.registrations >= training.max_capacity) {
+            throw new Error('No hay cupos disponibles para esta capacitación');
         }
         if (new Date() > training.registration_deadline) {
             throw new Error('La fecha límite de inscripción ha pasado');
@@ -28,7 +35,7 @@ class RegistrationsService {
             throw new Error('El trabajador ya está inscrito en esta capacitación');
         }
         const validationToken = crypto_1.default.randomBytes(32).toString('hex');
-        return db_1.default.registration.create({
+        const registration = await db_1.default.registration.create({
             data: {
                 training_id: data.training_id,
                 full_name: data.full_name,
@@ -44,6 +51,63 @@ class RegistrationsService {
                 registered_by: userId,
             }
         });
+        const newRegisteredCount = training._count.registrations + 1;
+        const remainingSlots = training.max_capacity - newRegisteredCount;
+        if (remainingSlots < 5) {
+            const existingCriticalAlert = await db_1.default.systemNotification.findFirst({
+                where: {
+                    training_id: training.id,
+                    type: 'critical_capacity_alert'
+                }
+            });
+            if (!existingCriticalAlert) {
+                const gerenciaUsers = await db_1.default.user.findMany({
+                    where: { role: 'super_super_admin', is_active: true },
+                    select: { email: true, name: true }
+                });
+                const subject = `⚠️ Alerta de cupos críticos - ${training.title}`;
+                const html = `
+                    <div style="font-family: Arial, sans-serif; color: #334155;">
+                      <h3 style="color:#ea580c;">⚠️ Alerta de cupos críticos</h3>
+                      <p>La capacitación <strong>${training.title}</strong> tiene menos de 5 cupos.</p>
+                      <p>Quedan <strong>${Math.max(0, remainingSlots)}</strong> cupos disponibles.</p>
+                    </div>
+                `;
+                for (const user of gerenciaUsers) {
+                    try {
+                        await (0, mailer_1.sendSystemNotification)(user.email, subject, html);
+                        await db_1.default.systemNotification.create({
+                            data: {
+                                training_id: training.id,
+                                type: 'critical_capacity_alert',
+                                status: 'sent',
+                                recipient_email: user.email,
+                                subject,
+                                body_html: html,
+                                sent_at: new Date()
+                            }
+                        });
+                    }
+                    catch (error) {
+                        await db_1.default.systemNotification.create({
+                            data: {
+                                training_id: training.id,
+                                type: 'critical_capacity_alert',
+                                status: 'failed',
+                                recipient_email: user.email,
+                                subject,
+                                body_html: html
+                            }
+                        });
+                        console.error('Error sending critical_capacity_alert notification:', error);
+                    }
+                }
+            }
+        }
+        return {
+            ...registration,
+            registered_count: newRegisteredCount
+        };
     }
     async validate(id, status, userId, rejectionReason) {
         const registration = await db_1.default.registration.findUnique({ where: { id } });
