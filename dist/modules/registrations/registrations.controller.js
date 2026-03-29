@@ -62,5 +62,16 @@ class RegistrationsController {
             res.status(500).json({ success: false, message: error.message });
         }
     };
+    update = async (req, res) => {
+        try {
+            const id = req.params.id;
+            const updateDto = req.body;
+            const updatedRegistration = await this.registrationsService.update(id, updateDto);
+            res.status(200).json({ success: true, data: updatedRegistration, message: 'Participante actualizado correctamente' });
+        }
+        catch (error) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
 }
 exports.RegistrationsController = RegistrationsController;

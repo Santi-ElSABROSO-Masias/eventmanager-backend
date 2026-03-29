@@ -197,5 +197,56 @@ class RegistrationsService {
             }
         });
     }
+    // NOTE: Excel operations (importFromExcel / exportToExcel) would require XLSX library
+    // We'll scaffold these to return Not Implemented or keep them out of scope for MVP setup
+    async update(id, data) {
+        const registration = await db_1.default.registration.findUnique({
+            where: { id }
+        });
+        if (!registration) {
+            throw new Error('Registro no encontrado');
+        }
+        // Verificar duplicados si cambia email
+        if (data.email && data.email !== registration.email) {
+            const emailExists = await db_1.default.registration.findFirst({
+                where: {
+                    training_id: registration.training_id,
+                    email: data.email,
+                    NOT: { id }
+                }
+            });
+            if (emailExists) {
+                throw new Error(JSON.stringify({
+                    field: 'email',
+                    message: `El correo ${data.email} ya está registrado en este curso`
+                }));
+            }
+        }
+        // Verificar duplicados si cambia teléfono
+        if (data.phone && data.phone !== registration.phone) {
+            const phoneExists = await db_1.default.registration.findFirst({
+                where: {
+                    training_id: registration.training_id,
+                    phone: data.phone,
+                    NOT: { id }
+                }
+            });
+            if (phoneExists) {
+                throw new Error(JSON.stringify({
+                    field: 'phone',
+                    message: `El teléfono ${data.phone} ya está registrado en este curso`
+                }));
+            }
+        }
+        return db_1.default.registration.update({
+            where: { id },
+            data: {
+                ...(data.name && { full_name: data.name }),
+                ...(data.dni && { dni: data.dni }),
+                ...(data.email && { email: data.email }),
+                ...(data.phone && { phone: data.phone }),
+            }
+        });
+    }
 }
 exports.RegistrationsService = RegistrationsService;

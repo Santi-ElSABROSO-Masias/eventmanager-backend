@@ -33,6 +33,8 @@ router.get('/', (0, roles_middleware_1.authorize)('super_super_admin', 'super_ad
 router.post('/', (0, roles_middleware_1.authorize)('super_super_admin', 'super_admin', 'admin_contratista'), (0, validation_middleware_1.validate)(registrations_dto_1.createRegistrationSchema), registrationsController.create);
 // Inscribir masivamente (Excel)
 router.post('/bulk', (0, roles_middleware_1.authorize)('super_super_admin', 'super_admin', 'admin_contratista'), upload.single('file'), registrationsController.bulkRegister);
+// Editar un participante
+router.patch('/:id', (0, roles_middleware_1.authorize)('super_super_admin', 'admin_contratista'), (0, validation_middleware_1.validate)(registrations_dto_1.updateRegistrationSchema), registrationsController.update);
 // Validaciones Multinivel
 // Nivel 2: Capacitador revisa documentos
 router.put('/:id/validate', (0, roles_middleware_1.authorize)('super_admin', 'super_super_admin'), (0, validation_middleware_1.validate)(registrations_dto_1.validationSchema), registrationsController.validateLevel2);

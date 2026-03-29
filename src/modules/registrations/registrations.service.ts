@@ -1,5 +1,5 @@
 import prisma from '../../config/db';
-import { CreateRegistrationDto } from './dto/registrations.dto';
+import { CreateRegistrationDto, UpdateRegistrationDto } from './dto/registrations.dto';
 import crypto from 'crypto';
 import { sendSystemNotification } from '../induccion-temporal/utils/mailer';
 
@@ -218,4 +218,58 @@ export class RegistrationsService {
 
     // NOTE: Excel operations (importFromExcel / exportToExcel) would require XLSX library
     // We'll scaffold these to return Not Implemented or keep them out of scope for MVP setup
+
+    async update(id: string, data: UpdateRegistrationDto) {
+        const registration = await prisma.registration.findUnique({
+            where: { id }
+        });
+
+        if (!registration) {
+            throw new Error('Registro no encontrado');
+        }
+
+        // Verificar duplicados si cambia email
+        if (data.email && data.email !== registration.email) {
+            const emailExists = await prisma.registration.findFirst({
+                where: {
+                    training_id: registration.training_id,
+                    email: data.email,
+                    NOT: { id }
+                }
+            });
+            if (emailExists) {
+                throw new Error(JSON.stringify({
+                    field: 'email',
+                    message: `El correo ${data.email} ya está registrado en este curso`
+                }));
+            }
+        }
+
+        // Verificar duplicados si cambia teléfono
+        if (data.phone && data.phone !== registration.phone) {
+            const phoneExists = await prisma.registration.findFirst({
+                where: {
+                    training_id: registration.training_id,
+                    phone: data.phone,
+                    NOT: { id }
+                }
+            });
+            if (phoneExists) {
+                throw new Error(JSON.stringify({
+                    field: 'phone',
+                    message: `El teléfono ${data.phone} ya está registrado en este curso`
+                }));
+            }
+        }
+
+        return prisma.registration.update({
+            where: { id },
+            data: {
+                ...(data.name && { full_name: data.name }),
+                ...(data.dni && { dni: data.dni }),
+                ...(data.email && { email: data.email }),
+                ...(data.phone && { phone: data.phone }),
+            }
+        });
+    }
 }

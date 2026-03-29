@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { RegistrationsService } from './registrations.service';
-import { CreateRegistrationDto, ValidationDto } from './dto/registrations.dto';
+import { CreateRegistrationDto, UpdateRegistrationDto, ValidationDto } from './dto/registrations.dto';
 
 export class RegistrationsController {
     private registrationsService = new RegistrationsService();
@@ -64,6 +64,18 @@ export class RegistrationsController {
             return res.status(501).json({ success: false, message: 'Importación masiva en desarrollo (Falta integración con Excel)' });
         } catch (error: any) {
             res.status(500).json({ success: false, message: error.message });
+        }
+    };
+
+    update = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id as string;
+            const updateDto: UpdateRegistrationDto = req.body;
+
+            const updatedRegistration = await this.registrationsService.update(id, updateDto);
+            res.status(200).json({ success: true, data: updatedRegistration, message: 'Participante actualizado correctamente' });
+        } catch (error: any) {
+            res.status(400).json({ success: false, message: error.message });
         }
     };
 }

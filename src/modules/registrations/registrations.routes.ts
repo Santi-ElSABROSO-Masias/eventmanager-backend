@@ -4,7 +4,7 @@ import { RegistrationsController } from './registrations.controller';
 import { validate } from '../../middlewares/validation.middleware';
 import { authenticate } from '../../middlewares/auth.middleware';
 import { authorize } from '../../middlewares/roles.middleware';
-import { createRegistrationSchema, validationSchema } from './dto/registrations.dto';
+import { createRegistrationSchema, updateRegistrationSchema, validationSchema } from './dto/registrations.dto';
 
 const router = Router();
 const registrationsController = new RegistrationsController();
@@ -33,6 +33,14 @@ router.post('/', authorize('super_super_admin', 'super_admin', 'admin_contratist
 
 // Inscribir masivamente (Excel)
 router.post('/bulk', authorize('super_super_admin', 'super_admin', 'admin_contratista'), upload.single('file'), registrationsController.bulkRegister);
+
+// Editar un participante
+router.patch(
+  '/:id',
+  authorize('super_super_admin', 'admin_contratista'),
+  validate(updateRegistrationSchema),
+  registrationsController.update
+);
 
 // Validaciones Multinivel
 // Nivel 2: Capacitador revisa documentos
