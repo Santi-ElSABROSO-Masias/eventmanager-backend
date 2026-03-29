@@ -9,6 +9,8 @@ const helmet_1 = __importDefault(require("helmet"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const env_1 = require("./config/env");
 const app = (0, express_1.default)();
+// CRITICAL: Confiar en el proxy (necesario para Easypanel y X-Forwarded-For en express-rate-limit)
+app.set('trust proxy', 1);
 app.use((0, helmet_1.default)());
 app.use((0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000,

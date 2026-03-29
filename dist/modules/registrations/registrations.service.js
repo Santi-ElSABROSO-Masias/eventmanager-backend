@@ -34,6 +34,34 @@ class RegistrationsService {
         if (existing) {
             throw new Error('El trabajador ya está inscrito en esta capacitación');
         }
+        // Verificar email duplicado en el mismo curso
+        const emailExists = await db_1.default.registration.findFirst({
+            where: {
+                training_id: data.training_id,
+                email: data.email
+            }
+        });
+        if (emailExists) {
+            throw new Error(JSON.stringify({
+                field: 'email',
+                message: `El correo ${data.email} ya está registrado en este curso`
+            }));
+        }
+        // Verificar teléfono duplicado en el mismo curso  
+        if (data.phone) {
+            const phoneExists = await db_1.default.registration.findFirst({
+                where: {
+                    training_id: data.training_id,
+                    phone: data.phone
+                }
+            });
+            if (phoneExists) {
+                throw new Error(JSON.stringify({
+                    field: 'phone',
+                    message: `El teléfono ${data.phone} ya está registrado en este curso`
+                }));
+            }
+        }
         const validationToken = crypto_1.default.randomBytes(32).toString('hex');
         const registration = await db_1.default.registration.create({
             data: {

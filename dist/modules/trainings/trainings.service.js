@@ -8,30 +8,53 @@ const db_1 = __importDefault(require("../../config/db"));
 const mailer_1 = require("../induccion-temporal/utils/mailer");
 class TrainingsService {
     async create(data, userId) {
-        return db_1.default.training.create({
-            data: {
-                title: data.title,
-                description: data.description,
-                start_date: new Date(data.start_date),
-                start_time: new Date(`1970-01-01T${data.start_time}:00Z`),
-                end_time: new Date(`1970-01-01T${data.end_time}:00Z`),
-                max_capacity: data.max_capacity,
-                duration_hours: data.duration_hours,
-                color: data.color,
-                group_number: data.group_number,
-                registration_deadline: new Date(data.registration_deadline),
-                meeting_link: data.meeting_link,
-                status: data.status,
-                is_active: data.is_active,
-                is_published: data.is_published,
-                template_id: data.template_id,
-                company_id: data.company_id,
-                created_by: userId,
+        try {
+            console.log('Create training - Datos recibidos:', JSON.stringify(data, null, 2));
+            // FIX 1: Validar meeting_link - enviar undefined si es URL inválida o vacío
+            let meetingLink = data.meeting_link;
+            if (meetingLink) {
+                try {
+                    new URL(meetingLink);
+                }
+                catch {
+                    console.warn('URL de meeting_link inválida, enviando undefined:', meetingLink);
+                    meetingLink = undefined;
+                }
             }
-        });
+            else if (meetingLink === '') {
+                meetingLink = undefined;
+            }
+            const training = await db_1.default.training.create({
+                data: {
+                    title: data.title,
+                    description: data.description,
+                    start_date: new Date(data.start_date),
+                    start_time: new Date(`1970-01-01T${data.start_time}:00Z`),
+                    end_time: new Date(`1970-01-01T${data.end_time}:00Z`),
+                    max_capacity: data.max_capacity,
+                    duration_hours: data.duration_hours,
+                    color: data.color,
+                    group_number: data.group_number,
+                    registration_deadline: new Date(data.registration_deadline),
+                    meeting_link: meetingLink,
+                    status: data.status,
+                    is_active: data.is_active,
+                    is_published: data.is_published,
+                    template_id: data.template_id,
+                    company_id: data.company_id,
+                    created_by: userId,
+                }
+            });
+            console.log('Training creado exitosamente:', training.id);
+            return training;
+        }
+        catch (error) {
+            console.error('Error exacto en create:', JSON.stringify(error, null, 2));
+            throw error;
+        }
     }
     async findAll(filters) {
-        const where = {};
+        const where = { is_active: true };
         if (filters.status)
             where.status = filters.status;
         if (filters.companyId)
@@ -59,68 +82,86 @@ class TrainingsService {
         });
     }
     async update(id, data) {
-        const existing = await db_1.default.training.findUnique({ where: { id } });
-        if (!existing)
-            throw new Error('Capacitación no encontrada');
-        const updateData = { ...data };
-        if (data.start_date)
-            updateData.start_date = new Date(data.start_date);
-        if (data.registration_deadline)
-            updateData.registration_deadline = new Date(data.registration_deadline);
-        if (data.start_time)
-            updateData.start_time = new Date(`1970-01-01T${data.start_time}:00Z`);
-        if (data.end_time)
-            updateData.end_time = new Date(`1970-01-01T${data.end_time}:00Z`);
-        const updatedTraining = await db_1.default.training.update({
-            where: { id },
-            data: updateData
-        });
-        const justPublished = existing.is_published === false && updatedTraining.is_published === true;
-        if (justPublished) {
-            const contractorAdmins = await db_1.default.user.findMany({
-                where: { role: 'admin_contratista', is_active: true },
-                select: { email: true, name: true }
+        try {
+            console.log('[UPDATE] ID:', id);
+            console.log('[UPDATE] Payload:', JSON.stringify(data));
+            const existing = await db_1.default.training.findUnique({ where: { id } });
+            if (!existing)
+                throw new Error('Capacitación no encontrada');
+            const updateData = { ...data };
+            if (data.start_date)
+                updateData.start_date = new Date(data.start_date);
+            if (data.registration_deadline)
+                updateData.registration_deadline = new Date(data.registration_deadline);
+            if (data.start_time)
+                updateData.start_time = new Date(`1970-01-01T${data.start_time}:00Z`);
+            if (data.end_time)
+                updateData.end_time = new Date(`1970-01-01T${data.end_time}:00Z`);
+            const updatedTraining = await db_1.default.training.update({
+                where: { id },
+                data: updateData
             });
-            for (const admin of contractorAdmins) {
-                const subject = `Nueva capacitación disponible - ${updatedTraining.title}`;
-                const html = `
-                    <div style="font-family: Arial, sans-serif; color: #334155;">
-                      <h3 style="color:#10b981;">📚 Nueva capacitación disponible: ${updatedTraining.title}</h3>
-                      <p>Fecha: <strong>${updatedTraining.start_date.toISOString().split('T')[0]}</strong></p>
-                      <p>Cupos: <strong>${updatedTraining.max_capacity}</strong></p>
-                      <p>Ingresa a la plataforma para inscribir a tus trabajadores.</p>
-                    </div>
-                `;
+            const justPublished = existing.is_published === false && updatedTraining.is_published === true;
+            if (justPublished) {
                 try {
-                    await (0, mailer_1.sendSystemNotification)(admin.email, subject, html);
-                    await db_1.default.systemNotification.create({
-                        data: {
-                            training_id: updatedTraining.id,
-                            type: 'new_training_published',
-                            status: 'sent',
-                            recipient_email: admin.email,
-                            subject,
-                            body_html: html,
-                            sent_at: new Date()
-                        }
+                    const contractorAdmins = await db_1.default.user.findMany({
+                        where: { role: 'admin_contratista', is_active: true },
+                        select: { email: true, name: true }
                     });
+                    for (const admin of contractorAdmins) {
+                        const subject = `Nueva capacitación disponible - ${updatedTraining.title}`;
+                        const html = `
+                            <div style="font-family: Arial, sans-serif; color: #334155;">
+                              <h3 style="color:#10b981;">📚 Nueva capacitación disponible: ${updatedTraining.title}</h3>
+                              <p>Fecha: <strong>${updatedTraining.start_date.toISOString().split('T')[0]}</strong></p>
+                              <p>Cupos: <strong>${updatedTraining.max_capacity}</strong></p>
+                              <p>Ingresa a la plataforma para inscribir a tus trabajadores.</p>
+                            </div>
+                        `;
+                        try {
+                            await (0, mailer_1.sendSystemNotification)(admin.email, subject, html);
+                            await db_1.default.systemNotification.create({
+                                data: {
+                                    training_id: updatedTraining.id,
+                                    type: 'new_training_published',
+                                    status: 'sent',
+                                    recipient_email: admin.email,
+                                    subject,
+                                    body_html: html,
+                                    sent_at: new Date()
+                                }
+                            });
+                        }
+                        catch (error) {
+                            await db_1.default.systemNotification.create({
+                                data: {
+                                    training_id: updatedTraining.id,
+                                    type: 'new_training_published',
+                                    status: 'failed',
+                                    recipient_email: admin.email,
+                                    subject,
+                                    body_html: html
+                                }
+                            });
+                            console.error('Error sending new_training_published notification:', error);
+                        }
+                    }
                 }
-                catch (error) {
-                    await db_1.default.systemNotification.create({
-                        data: {
-                            training_id: updatedTraining.id,
-                            type: 'new_training_published',
-                            status: 'failed',
-                            recipient_email: admin.email,
-                            subject,
-                            body_html: html
-                        }
-                    });
-                    console.error('Error sending new_training_published notification:', error);
+                catch (notifError) {
+                    console.error('Notificación falló, continuando...', notifError);
+                    // NO relanzar el error - el update se completará de todas formas
                 }
             }
+            return updatedTraining;
         }
-        return updatedTraining;
+        catch (error) {
+            console.error('[UPDATE] Error:', {
+                message: error?.message,
+                code: error?.code,
+                meta: error?.meta
+            });
+            throw error;
+        }
     }
     async extendDeadline(id, data, userId) {
         return db_1.default.training.update({
