@@ -51,6 +51,27 @@ app.use('/api/validation', validationRoutes);
 app.use('/api/exams', examsRoutes);
 app.use('/api/authorizations', authorizationsRoutes);
 
+import multer from 'multer';
+
+// Multer Error Handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof multer.MulterError || err.message) {
+    try {
+      const errorData = JSON.parse(err.message);
+      return res.status(400).json({
+        success: false,
+        ...errorData
+      });
+    } catch {
+      return res.status(400).json({
+        success: false,
+        message: err.message
+      });
+    }
+  }
+  next(err);
+});
+
 // Global Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);

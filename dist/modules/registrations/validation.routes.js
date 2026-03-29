@@ -9,17 +9,22 @@ const validation_controller_1 = require("./validation.controller");
 const router = (0, express_1.Router)();
 const validationController = new validation_controller_1.ValidationController();
 // Configuración básica de Multer en memoria
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.mimetype)) {
+        cb(new Error(JSON.stringify({
+            field: 'dni_photo',
+            message: 'Solo se permiten imágenes JPG, PNG o WEBP'
+        })), false);
+        return;
+    }
+    cb(null, true);
+};
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
-    fileFilter: (req, file, cb) => {
-        const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
-        if (allowed.includes(file.mimetype)) {
-            cb(null, true);
-        }
-        else {
-            cb(null, false);
-        }
+    fileFilter,
+    limits: {
+        fileSize: 10 * 1024 * 1024, // máximo 10MB
     }
 });
 // Endpoint público para que el trabajador obtenga sus datos desde su correo

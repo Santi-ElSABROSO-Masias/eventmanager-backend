@@ -46,6 +46,26 @@ app.use('/api/registrations', registrations_routes_1.default);
 app.use('/api/validation', validation_routes_1.default);
 app.use('/api/exams', exams_routes_1.default);
 app.use('/api/authorizations', authorizations_routes_1.default);
+const multer_1 = __importDefault(require("multer"));
+// Multer Error Handler
+app.use((err, req, res, next) => {
+    if (err instanceof multer_1.default.MulterError || err.message) {
+        try {
+            const errorData = JSON.parse(err.message);
+            return res.status(400).json({
+                success: false,
+                ...errorData
+            });
+        }
+        catch {
+            return res.status(400).json({
+                success: false,
+                message: err.message
+            });
+        }
+    }
+    next(err);
+});
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error(err.stack);
