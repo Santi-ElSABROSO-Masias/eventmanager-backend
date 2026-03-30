@@ -46,7 +46,10 @@ router.patch(
 // Nivel 2: Capacitador revisa documentos
 router.put('/:id/validate', authorize('super_admin', 'super_super_admin'), validate(validationSchema), registrationsController.validateLevel2);
 
-// Nivel 1: Gerencia SSO aprueba finalmente
+// Nivel 1: Gerencia SSO aprueba finalmente (ruta original PUT)
 router.put('/:id/approve', authorize('super_super_admin'), registrationsController.approveLevel1);
+
+// Nivel 1: Ruta PATCH requerida por el frontend
+router.patch('/:id/approve-level-1', authorize('super_super_admin', 'super_admin', 'admin_contratista'), registrationsController.approveLevel1);
 
 export default router;

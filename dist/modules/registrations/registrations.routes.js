@@ -38,6 +38,8 @@ router.patch('/:id', (0, roles_middleware_1.authorize)('super_super_admin', 'adm
 // Validaciones Multinivel
 // Nivel 2: Capacitador revisa documentos
 router.put('/:id/validate', (0, roles_middleware_1.authorize)('super_admin', 'super_super_admin'), (0, validation_middleware_1.validate)(registrations_dto_1.validationSchema), registrationsController.validateLevel2);
-// Nivel 1: Gerencia SSO aprueba finalmente
+// Nivel 1: Gerencia SSO aprueba finalmente (ruta original PUT)
 router.put('/:id/approve', (0, roles_middleware_1.authorize)('super_super_admin'), registrationsController.approveLevel1);
+// Nivel 1: Ruta PATCH requerida por el frontend
+router.patch('/:id/approve-level-1', (0, roles_middleware_1.authorize)('super_super_admin', 'super_admin', 'admin_contratista'), registrationsController.approveLevel1);
 exports.default = router;
