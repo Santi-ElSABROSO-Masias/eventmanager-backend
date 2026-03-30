@@ -162,20 +162,31 @@ class RegistrationsService {
             }
         });
     }
-    async approveFinal(id, userId) {
+    async approveFinal(id, userId, meetingLink) {
         const registration = await db_1.default.registration.findUnique({ where: { id } });
         if (!registration)
             throw new Error('Inscripción no encontrada');
-        if (registration.status !== 'pendiente') {
-            throw new Error('La inscripción debe ser validada previamente por el Nivel 2 (estado: pendiente)');
+        // Solo bloqueamos si ya fue rechazado — no se puede resucitar un rechazo
+        if (registration.status === 'rechazado') {
+            throw new Error('No se puede aprobar una inscripción que fue rechazada');
         }
+        const now = new Date();
+        // Si el Nivel 2 no validó todavía, el Nivel 1 lo auto-completa
+        // para que la aprobación quede reflejada en toda la cadena
+        const level2AutoData = !registration.approved_by_level2
+            ? {
+                approved_by_level2: userId,
+                approved_at_level2: now,
+            }
+            : {};
         return db_1.default.registration.update({
             where: { id },
             data: {
                 status: 'aprobado',
                 approved_by_level1: userId,
-                approved_at_level1: new Date(),
-                // Acá se desencadenaría el envío por correo si la generación de Teams Link es post-aprobación
+                approved_at_level1: now,
+                ...(meetingLink && { meeting_link: meetingLink }),
+                ...level2AutoData,
             }
         });
     }

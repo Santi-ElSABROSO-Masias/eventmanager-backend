@@ -43,7 +43,8 @@ class RegistrationsController {
         try {
             const id = req.params.id;
             const userId = req.user.id;
-            const registration = await this.registrationsService.approveFinal(id, userId);
+            const { meetingLink } = req.body;
+            const registration = await this.registrationsService.approveFinal(id, userId, meetingLink);
             res.json({ success: true, data: registration, message: 'Inscripción aprobada por Nivel 1' });
         }
         catch (error) {
