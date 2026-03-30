@@ -191,22 +191,49 @@ class RegistrationsService {
         });
     }
     async findAll(filters) {
-        const where = {};
-        if (filters.trainingId)
-            where.training_id = filters.trainingId;
-        if (filters.status)
-            where.status = filters.status;
-        // Auth scoping
-        if (filters.userRole === 'admin_contratista' && filters.userCompanyId) {
-            where.training = { company_id: filters.userCompanyId };
+        // Auth validation
+        if (filters.userRole === 'admin_contratista' && !filters.userCompanyId) {
+            throw new Error('admin_contratista must have companyId to query registrations');
         }
-        return db_1.default.registration.findMany({
+        const where = {};
+        // Base filters
+        if (filters.trainingId) {
+            where.training_id = filters.trainingId;
+        }
+        if (filters.status) {
+            where.status = filters.status;
+        }
+        // Role-based authorization scoping
+        if (filters.userRole === 'admin_contratista') {
+            // For admin_contratista, get trainings belonging to their company first,
+            // then get registrations for those trainings
+            const companyTrainings = await db_1.default.training.findMany({
+                where: { company_id: filters.userCompanyId },
+                select: { id: true }
+            });
+            const trainingIds = companyTrainings.map((t) => t.id);
+            if (trainingIds.length === 0) {
+                // No trainings for this company, return empty result
+                return [];
+            }
+            where.training_id = { in: trainingIds };
+        }
+        // For super_super_admin and super_admin, no company filtering - they see everything
+        const registrations = await db_1.default.registration.findMany({
             where,
             orderBy: { registered_at: 'desc' },
             include: {
-                training: { select: { title: true, start_date: true } }
+                training: {
+                    select: {
+                        id: true,
+                        title: true,
+                        start_date: true,
+                        company_id: true
+                    }
+                }
             }
         });
+        return registrations;
     }
     // NOTE: Excel operations (importFromExcel / exportToExcel) would require XLSX library
     // We'll scaffold these to return Not Implemented or keep them out of scope for MVP setup
