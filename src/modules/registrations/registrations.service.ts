@@ -211,6 +211,8 @@ export class RegistrationsService {
     }
 
     async findAll(filters: any) {
+        console.log('[findAll] Starting with filters:', filters);
+
         // Auth validation
         if (filters.userRole === 'admin_contratista' && !filters.userCompanyId) {
             throw new Error('admin_contratista must have companyId to query registrations');
@@ -228,6 +230,8 @@ export class RegistrationsService {
 
         // Role-based authorization scoping
         if (filters.userRole === 'admin_contratista') {
+            console.log('[findAll] Filtering for admin_contratista with company:', filters.userCompanyId);
+
             // For admin_contratista, get trainings belonging to their company first,
             // then get registrations for those trainings
             const companyTrainings = await prisma.training.findMany({
@@ -235,14 +239,17 @@ export class RegistrationsService {
                 select: { id: true }
             });
 
+            console.log('[findAll] Found', companyTrainings.length, 'trainings for company:', filters.userCompanyId);
+
             const trainingIds = companyTrainings.map((t: any) => t.id);
             
             if (trainingIds.length === 0) {
-                // No trainings for this company, return empty result
+                console.log('[findAll] No trainings found for this company, returning empty');
                 return [];
             }
             
             where.training_id = { in: trainingIds };
+            console.log('[findAll] Filtering registrations by trainingIds:', trainingIds);
         }
         // For super_super_admin and super_admin, no company filtering - they see everything
 
@@ -260,6 +267,8 @@ export class RegistrationsService {
                 }
             }
         });
+
+        console.log('[findAll] Returning', registrations.length, 'registrations');
 
         return registrations;
     }
