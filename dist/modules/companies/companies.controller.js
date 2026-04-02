@@ -16,7 +16,20 @@ class CompaniesController {
     };
     findAll = async (req, res) => {
         try {
-            const companies = await this.companiesService.findAll();
+            const user = req.user;
+            let companies;
+            if (user.role === 'admin_contratista') {
+                if (!user.companyId) {
+                    return res.json({ success: true, data: [] });
+                }
+                const company = await this.companiesService.findOne(user.companyId);
+                // Mantenemos formato de array para consistencia con findAll
+                companies = company ? [company] : [];
+            }
+            else {
+                // super_super_admin y super_admin ven todas las empresas
+                companies = await this.companiesService.findAll();
+            }
             res.json({ success: true, data: companies });
         }
         catch (error) {
@@ -26,6 +39,11 @@ class CompaniesController {
     findOne = async (req, res) => {
         try {
             const id = req.params.id;
+            const user = req.user;
+            // Verificación de seguridad para admin_contratista
+            if (user.role === 'admin_contratista' && user.companyId !== id) {
+                return res.status(403).json({ success: false, message: 'No tiene permiso para ver esta empresa' });
+            }
             const company = await this.companiesService.findOne(id);
             if (!company) {
                 return res.status(404).json({ success: false, message: 'Empresa no encontrada' });

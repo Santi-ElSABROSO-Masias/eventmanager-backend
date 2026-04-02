@@ -20,10 +20,13 @@ class RegistrationsController {
             const { trainingId, status } = req.query;
             const userRole = req.user.role;
             const userCompanyId = req.user.companyId;
+            console.log('[GET /registrations] userRole:', userRole, 'userCompanyId:', userCompanyId, 'trainingId:', trainingId);
             const registrations = await this.registrationsService.findAll({ trainingId, status, userRole, userCompanyId });
+            console.log('[GET /registrations] Registrations returned:', registrations.length);
             res.json({ success: true, data: registrations });
         }
         catch (error) {
+            console.error('[GET /registrations] Error:', error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     };

@@ -9,10 +9,9 @@ const companies_dto_1 = require("./dto/companies.dto");
 const router = (0, express_1.Router)();
 const companiesController = new companies_controller_1.CompaniesController();
 router.use(auth_middleware_1.authenticate);
-// Listar y ver empresas (accesible por gerencia_sso y administradores contratistas que ven su propia data)
-// NOTA: Para producción agregar middleware para asegurar que administrador solo ve su propia empresa.
-router.get('/', (0, roles_middleware_1.authorize)('super_super_admin'), companiesController.findAll);
-router.get('/:id', companiesController.findOne);
+// Listar y ver empresas (accesible por gerencia_sso, capacitadores y administradores contratistas)
+router.get('/', (0, roles_middleware_1.authorize)('super_super_admin', 'super_admin', 'admin_contratista'), companiesController.findAll);
+router.get('/:id', (0, roles_middleware_1.authorize)('super_super_admin', 'super_admin', 'admin_contratista'), companiesController.findOne);
 // Acciones exclusivas de gerencia_sso
 router.post('/', (0, roles_middleware_1.authorize)('super_super_admin'), (0, validation_middleware_1.validate)(companies_dto_1.createCompanySchema), companiesController.create);
 router.put('/:id', (0, roles_middleware_1.authorize)('super_super_admin'), (0, validation_middleware_1.validate)(companies_dto_1.updateCompanySchema), companiesController.update);

@@ -191,6 +191,7 @@ class RegistrationsService {
         });
     }
     async findAll(filters) {
+        console.log('[findAll] Starting with filters:', filters);
         // Auth validation
         if (filters.userRole === 'admin_contratista' && !filters.userCompanyId) {
             throw new Error('admin_contratista must have companyId to query registrations');
@@ -205,18 +206,21 @@ class RegistrationsService {
         }
         // Role-based authorization scoping
         if (filters.userRole === 'admin_contratista') {
+            console.log('[findAll] Filtering for admin_contratista with company:', filters.userCompanyId);
             // For admin_contratista, get trainings belonging to their company first,
             // then get registrations for those trainings
             const companyTrainings = await db_1.default.training.findMany({
                 where: { company_id: filters.userCompanyId },
                 select: { id: true }
             });
+            console.log('[findAll] Found', companyTrainings.length, 'trainings for company:', filters.userCompanyId);
             const trainingIds = companyTrainings.map((t) => t.id);
             if (trainingIds.length === 0) {
-                // No trainings for this company, return empty result
+                console.log('[findAll] No trainings found for this company, returning empty');
                 return [];
             }
             where.training_id = { in: trainingIds };
+            console.log('[findAll] Filtering registrations by trainingIds:', trainingIds);
         }
         // For super_super_admin and super_admin, no company filtering - they see everything
         const registrations = await db_1.default.registration.findMany({
@@ -233,6 +237,7 @@ class RegistrationsService {
                 }
             }
         });
+        console.log('[findAll] Returning', registrations.length, 'registrations');
         return registrations;
     }
     // NOTE: Excel operations (importFromExcel / exportToExcel) would require XLSX library
