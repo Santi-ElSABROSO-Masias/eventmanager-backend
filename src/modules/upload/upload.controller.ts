@@ -1,47 +1,34 @@
 import { Request, Response } from 'express';
-import { supabase } from '../../config/supabase';
+import { UploadService } from './upload.service';
+
+const uploadService = new UploadService();
 
 export class UploadController {
   async uploadPdf(req: Request, res: Response) {
     try {
+      console.log('[UploadController] Recibida solicitud para subir PDF');
+      
       if (!req.file) {
+        console.error('[UploadController] Error: No se adjuntó archivo');
         return res.status(400).json({ success: false, message: 'No se recibió archivo PDF' });
       }
 
-      // Validar estrictamente mimetype
-      if (req.file.mimetype !== 'application/pdf') {
-        return res.status(400).json({ success: false, message: 'Solo se permiten archivos PDF' });
-      }
+      const result = await uploadService.uploadPdf(req.file);
 
-      const file = req.file;
-      const fileExt = 'pdf';
-      const timestamp = Date.now();
-      const sanitizedName = file.originalname.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const fileName = `${timestamp}_${sanitizedName}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('autorizaciones')
-        .upload(filePath, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false
-        });
-
-      if (error) throw error;
-
-      const { data: urlData } = supabase.storage
-        .from('autorizaciones')
-        .getPublicUrl(filePath);
-
+      console.log('[UploadController] Éxito: Archivo subido y URL pública generada');
       res.status(201).json({ 
         success: true, 
-        url: urlData.publicUrl, 
-        name: file.originalname,
-        fileName: fileName 
+        ...result 
       });
     } catch (error: any) {
-      console.error('[UploadController] Error upload PDF:', error.message);
-      res.status(500).json({ success: false, message: error.message || 'Error al subir el archivo a Supabase' });
+      console.error('[UploadController] Catch Global Error:', error.message);
+      if (error.stack) console.error(error.stack);
+      
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || 'Error interno al procesar el archivo en el servidor',
+        error: error.message
+      });
     }
   }
 }
