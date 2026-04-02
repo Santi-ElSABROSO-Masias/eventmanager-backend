@@ -3,6 +3,7 @@ import { AuthorizationsService } from './authorizations.service';
 import { CreateHighRiskWorkDto, CreateDrivingLicenseDto, CreateVehicleDto, AuthApprovalDto } from './dto/authorizations.dto';
 import { createClient } from '@supabase/supabase-js';
 import { env } from '../../config/env';
+import { supabase } from '../../config/supabase';
 
 export class AuthorizationsController {
     private authService = new AuthorizationsService();
@@ -12,11 +13,11 @@ export class AuthorizationsController {
         try {
             if (!req.file) throw new Error('No se recibió archivo');
 
-            const supabaseUrl = process.env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
-            const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY || '';
+            const supabaseUrl = env.SUPABASE_URL || '';
+            const supabaseKey = env.SUPABASE_SERVICE_KEY || env.SUPABASE_ANON_KEY || '';
             if (!supabaseUrl || !supabaseKey) throw new Error('Faltan credenciales de Supabase en el Backend');
 
-            const supabaseClient = createClient(supabaseUrl, supabaseKey);
+            const supabaseClient = supabase; // Usar el cliente compartido
 
             const file = req.file;
             const fileExt = file.originalname.split('.').pop();
