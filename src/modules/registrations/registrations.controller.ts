@@ -8,9 +8,9 @@ export class RegistrationsController {
     create = async (req: Request, res: Response) => {
         try {
             const createDto: CreateRegistrationDto = req.body;
-            const userId = (req as any).user!.id;
+            const user = (req as any).user!; // Pasar el objecto completo de usuario (id, role, companyId)
 
-            const registration = await this.registrationsService.create(createDto, userId);
+            const registration = await this.registrationsService.create(createDto, user);
             res.status(201).json({ success: true, data: registration, message: 'Trabajador inscrito correctamente' });
         } catch (error: any) {
             res.status(400).json({ success: false, message: error.message });

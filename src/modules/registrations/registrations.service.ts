@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { sendSystemNotification } from '../induccion-temporal/utils/mailer';
 
 export class RegistrationsService {
-    async create(data: CreateRegistrationDto, userId: string) {
+    async create(data: CreateRegistrationDto, user: any) {
         const training = await prisma.training.findUnique({
             where: { id: data.training_id },
             include: { 
@@ -72,6 +72,15 @@ export class RegistrationsService {
 
         const validationToken = crypto.randomBytes(32).toString('hex');
 
+        // Force user organization if admin_contratista
+        let finalOrganization = data.organization;
+        if (user.role === 'admin_contratista' && user.companyId) {
+            const userCompany = await prisma.company.findUnique({ where: { id: user.companyId }});
+            if (userCompany) {
+                finalOrganization = userCompany.name;
+            }
+        }
+
         const registration = await prisma.registration.create({
             data: {
                 training_id: data.training_id,
@@ -79,13 +88,13 @@ export class RegistrationsService {
                 dni: data.dni,
                 email: data.email,
                 phone: data.phone,
-                organization: data.organization,
+                organization: finalOrganization,
                 area: data.area,
                 role: data.role,
                 brevete: data.brevete,
                 status: 'registrado',
                 validation_token: validationToken,
-                registered_by: userId,
+                registered_by: user.id,
             }
         });
 
