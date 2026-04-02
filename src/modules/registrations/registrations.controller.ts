@@ -22,10 +22,11 @@ export class RegistrationsController {
             const { trainingId, status } = req.query;
             const userRole = (req as any).user!.role;
             const userCompanyId = (req as any).user!.companyId;
+            const userId = (req as any).user!.id;
 
             console.log('[GET /registrations] userRole:', userRole, 'userCompanyId:', userCompanyId, 'trainingId:', trainingId);
 
-            const registrations = await this.registrationsService.findAll({ trainingId, status, userRole, userCompanyId });
+            const registrations = await this.registrationsService.findAll({ trainingId, status, userRole, userCompanyId, userId });
             
             console.log('[GET /registrations] Registrations returned:', registrations.length);
 

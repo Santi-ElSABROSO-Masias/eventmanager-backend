@@ -240,25 +240,17 @@ export class RegistrationsService {
         // Role-based authorization scoping
         if (filters.userRole === 'admin_contratista') {
             console.log('[findAll] Filtering for admin_contratista with company:', filters.userCompanyId);
-
-            // For admin_contratista, get trainings belonging to their company first,
-            // then get registrations for those trainings
-            const companyTrainings = await prisma.training.findMany({
-                where: { company_id: filters.userCompanyId },
-                select: { id: true }
-            });
-
-            console.log('[findAll] Found', companyTrainings.length, 'trainings for company:', filters.userCompanyId);
-
-            const trainingIds = companyTrainings.map((t: any) => t.id);
             
-            if (trainingIds.length === 0) {
-                console.log('[findAll] No trainings found for this company, returning empty');
-                return [];
-            }
+            const company = await prisma.company.findUnique({ where: { id: filters.userCompanyId } });
+            const companyName = company?.name || '';
+
+            where.OR = [
+                { training: { company_id: filters.userCompanyId } }, // Registros en sus propias capacitaciones (ven todos)
+                { organization: companyName },                       // Registros de su empresa en capacitaciones globales
+                { registered_by: filters.userId }                    // Seguridad: sus propios registros creados
+            ];
             
-            where.training_id = { in: trainingIds };
-            console.log('[findAll] Filtering registrations by trainingIds:', trainingIds);
+            console.log('[findAll] Applied OR filter for Admin Contratista using organization:', companyName);
         }
         // For super_super_admin and super_admin, no company filtering - they see everything
 
