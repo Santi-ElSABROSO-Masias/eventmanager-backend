@@ -242,15 +242,15 @@ export class RegistrationsService {
             console.log('[findAll] Filtering for admin_contratista with company:', filters.userCompanyId);
             
             const company = await prisma.company.findUnique({ where: { id: filters.userCompanyId } });
-            const companyName = company?.name || '';
+            const companyName = company?.name?.trim() || '';
 
             where.OR = [
-                { training: { company_id: filters.userCompanyId } }, // Registros en sus propias capacitaciones (ven todos)
-                { organization: companyName },                       // Registros de su empresa en capacitaciones globales
+                { training: { company_id: filters.userCompanyId } }, // Registros en sus propias capacitaciones
+                { organization: { equals: companyName, mode: 'insensitive' } }, // Match exacto pero case-insensitive
                 { registered_by: filters.userId }                    // Seguridad: sus propios registros creados
             ];
             
-            console.log('[findAll] Applied OR filter for Admin Contratista using organization:', companyName);
+            console.log('[findAll] Applied robust OR filter for Admin Contratista using organization:', companyName);
         }
         // For super_super_admin and super_admin, no company filtering - they see everything
 
