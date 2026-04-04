@@ -10,7 +10,7 @@ export const createRegistrationSchema = z.object({
     area: z.string().optional(),
     role: z.string().optional(),
     brevete: z.string().optional(),
-    dni_photo: z.string().optional(), // Nueva entrada para Base64
+    dni_photo_url: z.string().optional(), // Recibimos la URL desde el frontend
 });
 
 export const bulkRegistrationSchema = z.object({

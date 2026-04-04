@@ -2,7 +2,6 @@ import prisma from '../../config/db';
 import { CreateRegistrationDto, UpdateRegistrationDto } from './dto/registrations.dto';
 import crypto from 'crypto';
 import { sendSystemNotification } from '../induccion-temporal/utils/mailer';
-import { supabase } from '../../config/supabase';
 
 export class RegistrationsService {
     async create(data: CreateRegistrationDto, user: any) {
@@ -82,12 +81,6 @@ export class RegistrationsService {
             }
         }
 
-        // Subir foto si viene en Base64
-        let dniPhotoUrl: string | undefined = undefined;
-        if ((data as any).dni_photo) {
-            dniPhotoUrl = await this.uploadBase64ToSupabase((data as any).dni_photo, data.dni) || undefined;
-        }
-
         const registration = await prisma.registration.create({
             data: {
                 training_id: data.training_id,
@@ -102,7 +95,7 @@ export class RegistrationsService {
                 status: 'registrado',
                 validation_token: validationToken,
                 registered_by: user.id,
-                dni_photo_url: dniPhotoUrl,
+                dni_photo_url: data.dni_photo_url,
             }
         });
 
@@ -337,43 +330,5 @@ export class RegistrationsService {
                 ...(data.phone && { phone: data.phone }),
             }
         });
-    }
-
-    private async uploadBase64ToSupabase(base64Data: string, dni: string): Promise<string | null> {
-        try {
-            // Eliminar encabezado: data:image/jpeg;base64, (o similar)
-            const parts = base64Data.split(';base64,');
-            const base64Content = parts.pop();
-            if (!base64Content) return null;
-
-            // Extraer el tipo de contenido si es posible
-            const mimeMatch = parts[0]?.match(/data:(image\/\w+)/);
-            const contentType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-            const extension = contentType.split('/')[1] || 'jpg';
-
-            const buffer = Buffer.from(base64Content, 'base64');
-            const bucketName = 'capacitaciones';
-            const fileName = `fotos-dni/dni_${dni}_${Date.now()}.${extension}`;
-
-            console.log(`[RegistrationsService] Subiendo foto DNI a Supabase: bucket=${bucketName}, path=${fileName}`);
-
-            const { error } = await supabase.storage
-                .from(bucketName)
-                .upload(fileName, buffer, {
-                    contentType,
-                    upsert: false
-                });
-
-            if (error) throw error;
-
-            const { data: urlData } = supabase.storage
-                .from(bucketName)
-                .getPublicUrl(fileName);
-
-            return urlData.publicUrl;
-        } catch (error) {
-            console.error('[uploadBase64ToSupabase] Error crítico:', error);
-            return null;
-        }
     }
 }
