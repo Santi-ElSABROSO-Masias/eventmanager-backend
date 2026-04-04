@@ -29,7 +29,13 @@ router.use(authenticate);
 router.get('/', authorize('super_super_admin', 'super_admin', 'admin_contratista'), registrationsController.findAll);
 
 // Inscribir trabajador (Admin Contratista o superiores)
-router.post('/', authorize('super_super_admin', 'super_admin', 'admin_contratista'), validate(createRegistrationSchema), registrationsController.create);
+router.post(
+    '/', 
+    authorize('super_super_admin', 'super_admin', 'admin_contratista'), 
+    upload.single('dni_photo'), 
+    validate(createRegistrationSchema), 
+    registrationsController.create
+);
 
 // Inscribir masivamente (Excel)
 router.post('/bulk', authorize('super_super_admin', 'super_admin', 'admin_contratista'), upload.single('file'), registrationsController.bulkRegister);

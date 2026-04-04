@@ -2,9 +2,10 @@ import prisma from '../../config/db';
 import { CreateRegistrationDto, UpdateRegistrationDto } from './dto/registrations.dto';
 import crypto from 'crypto';
 import { sendSystemNotification } from '../induccion-temporal/utils/mailer';
+import { supabase } from '../../config/supabase';
 
 export class RegistrationsService {
-    async create(data: CreateRegistrationDto, user: any) {
+    async create(data: CreateRegistrationDto, user: any, file?: Express.Multer.File) {
         const training = await prisma.training.findUnique({
             where: { id: data.training_id },
             include: { 
@@ -81,6 +82,31 @@ export class RegistrationsService {
             }
         }
 
+        let dniPhotoUrl = data.dni_photo_url;
+
+        if (file) {
+            const fileExt = file.originalname.split('.').pop() || 'jpg';
+            const fileName = `fotos-dni/dni_${data.dni}_${Date.now()}.${fileExt}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('capacitaciones')
+                .upload(fileName, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: true
+                });
+
+            if (uploadError) {
+                console.error('[RegistrationsService] Error al subir foto:', uploadError);
+                throw new Error('No se pudo subir la foto del DNI: ' + uploadError.message);
+            }
+
+            const { data: urlData } = supabase.storage
+                .from('capacitaciones')
+                .getPublicUrl(fileName);
+
+            dniPhotoUrl = urlData.publicUrl;
+        }
+
         const registration = await prisma.registration.create({
             data: {
                 training_id: data.training_id,
@@ -95,7 +121,7 @@ export class RegistrationsService {
                 status: 'registrado',
                 validation_token: validationToken,
                 registered_by: user.id,
-                dni_photo_url: data.dni_photo_url,
+                dni_photo_url: dniPhotoUrl,
             }
         });
 

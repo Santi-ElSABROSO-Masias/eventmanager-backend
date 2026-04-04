@@ -10,7 +10,7 @@ export class RegistrationsController {
             const createDto: CreateRegistrationDto = req.body;
             const user = (req as any).user!; // Pasar el objecto completo de usuario (id, role, companyId)
 
-            const registration = await this.registrationsService.create(createDto, user);
+            const registration = await this.registrationsService.create(createDto, user, req.file);
             res.status(201).json({ success: true, data: registration, message: 'Trabajador inscrito correctamente' });
         } catch (error: any) {
             res.status(400).json({ success: false, message: error.message });
