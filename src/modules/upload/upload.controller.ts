@@ -13,7 +13,8 @@ export class UploadController {
         return res.status(400).json({ success: false, message: 'No se recibió archivo PDF' });
       }
 
-      const result = await uploadService.uploadPdf(req.file);
+      const { category } = req.body;
+      const result = await uploadService.uploadPdf(req.file, category);
 
       console.log('[UploadController] Éxito: Archivo subido y URL pública generada');
       res.status(201).json({ 

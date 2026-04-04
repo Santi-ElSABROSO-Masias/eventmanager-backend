@@ -1,14 +1,14 @@
 import { supabase } from '../../config/supabase';
 
 export class UploadService {
-  async uploadPdf(file: Express.Multer.File) {
+  async uploadPdf(file: Express.Multer.File, category?: string) {
     const bucketName = 'autorizaciones';
     const timestamp = Date.now();
-    const sanitizedName = file.originalname.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    const fileName = `${timestamp}_${sanitizedName}.pdf`;
-    const filePath = `${fileName}`;
+    const sanitizedName = file.originalname.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+    const fileName = `${timestamp}_${sanitizedName}`;
+    const filePath = category ? `${category}/${fileName}` : `${fileName}`;
 
-    console.log(`[UploadService] Preparando subida: bucket=${bucketName}, path=${filePath}, size=${file.size} bytes`);
+    console.log(`[UploadService] Preparando subida: bucket=${bucketName}, path=${filePath}, size=${file.size} bytes, category=${category}`);
 
     try {
       // Intentar la subida del Buffer a Supabase Storage

@@ -19,10 +19,11 @@ export class AuthorizationsController {
 
             const supabaseClient = supabase; // Usar el cliente compartido
 
+            const { category } = req.body;
             const file = req.file;
             const fileExt = file.originalname.split('.').pop();
             const fileName = `${Math.random().toString(36).substring(7)}.${fileExt}`;
-            const filePath = `${fileName}`;
+            const filePath = category ? `${category}/${fileName}` : `${fileName}`;
 
             const { data, error } = await supabaseClient.storage
                 .from('autorizaciones')
