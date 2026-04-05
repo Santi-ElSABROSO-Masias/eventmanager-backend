@@ -41,10 +41,42 @@ export class AuthorizationsService {
         const where: any = {};
         if (filters.company) where.company = filters.company;
         
-        return prisma.highRiskWorkAuth.findMany({
+        const records = await prisma.highRiskWorkAuth.findMany({
             where: where,
             orderBy: { date_requested: 'desc' },
             include: { requester: { select: { name: true } } }
+        });
+
+        // Enriquecer con nombres de empresa y extraer documentos
+        const companyIds = new Set<string>();
+        records.forEach(r => {
+            const match = r.company.match(/Empresa ID: ([a-f0-9\-]+)/i);
+            if (match) companyIds.add(match[1]);
+        });
+
+        const companies = await prisma.company.findMany({
+            where: { id: { in: Array.from(companyIds) } },
+            select: { id: true, name: true }
+        });
+        const companyMap = new Map(companies.map(c => [c.id, c.name]));
+
+        return records.map(r => {
+            let documents: any[] = [];
+            try {
+                if (r.rejection_reason) {
+                    const parsed = JSON.parse(r.rejection_reason);
+                    documents = parsed.documentos || [];
+                }
+            } catch { }
+
+            return {
+                ...r,
+                documents,
+                company_name: (() => {
+                    const match = r.company.match(/Empresa ID: ([a-f0-9\-]+)/i);
+                    return match && companyMap.has(match[1]) ? companyMap.get(match[1]) : r.company;
+                })()
+            };
         });
     }
 
@@ -134,9 +166,41 @@ export class AuthorizationsService {
         const where: any = {};
         if (filters.company) where.company = filters.company;
         
-        return prisma.drivingLicenseAuth.findMany({
+        const records = await prisma.drivingLicenseAuth.findMany({
             where: where,
             orderBy: { expiration_date: 'asc' },
+        });
+
+        // Enriquecer con nombres de empresa y extraer documentos
+        const companyIds = new Set<string>();
+        records.forEach(r => {
+            const match = r.company.match(/Empresa ID: ([a-f0-9\-]+)/i);
+            if (match) companyIds.add(match[1]);
+        });
+
+        const companies = await prisma.company.findMany({
+            where: { id: { in: Array.from(companyIds) } },
+            select: { id: true, name: true }
+        });
+        const companyMap = new Map(companies.map(c => [c.id, c.name]));
+
+        return records.map(r => {
+            let documents: any[] = [];
+            try {
+                if (r.rejection_reason) {
+                    const parsed = JSON.parse(r.rejection_reason);
+                    documents = parsed.documentos || [];
+                }
+            } catch { }
+
+            return {
+                ...r,
+                documents,
+                company_name: (() => {
+                    const match = r.company.match(/Empresa ID: ([a-f0-9\-]+)/i);
+                    return match && companyMap.has(match[1]) ? companyMap.get(match[1]) : r.company;
+                })()
+            };
         });
     }
 
@@ -179,8 +243,40 @@ export class AuthorizationsService {
         const where: any = {};
         if (filters.company) where.company = filters.company;
         
-        return prisma.vehicleAccreditation.findMany({
+        const records = await prisma.vehicleAccreditation.findMany({
             where: where,
+        });
+
+        // Enriquecer con nombres de empresa y extraer documentos
+        const companyIds = new Set<string>();
+        records.forEach(r => {
+            const match = r.company.match(/Empresa ID: ([a-f0-9\-]+)/i);
+            if (match) companyIds.add(match[1]);
+        });
+
+        const companies = await prisma.company.findMany({
+            where: { id: { in: Array.from(companyIds) } },
+            select: { id: true, name: true }
+        });
+        const companyMap = new Map(companies.map(c => [c.id, c.name]));
+
+        return records.map(r => {
+            let documents: any[] = [];
+            try {
+                if (r.rejection_reason) {
+                    const parsed = JSON.parse(r.rejection_reason);
+                    documents = parsed.documentos || [];
+                }
+            } catch { }
+
+            return {
+                ...r,
+                documents,
+                company_name: (() => {
+                    const match = r.company.match(/Empresa ID: ([a-f0-9\-]+)/i);
+                    return match && companyMap.has(match[1]) ? companyMap.get(match[1]) : r.company;
+                })()
+            };
         });
     }
 
