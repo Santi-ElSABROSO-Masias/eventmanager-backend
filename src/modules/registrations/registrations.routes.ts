@@ -32,7 +32,19 @@ router.get('/', authorize('super_super_admin', 'super_admin', 'admin_contratista
 router.post(
     '/', 
     authorize('super_super_admin', 'super_admin', 'admin_contratista'), 
-    upload.single('dni_photo'), 
+    upload.single('dni_photo'),
+    (req, res, next) => {
+        console.log('[POST /registrations] Debug Multer:', {
+            body: req.body,
+            file: req.file ? {
+                fieldname: req.file.fieldname,
+                originalname: req.file.originalname,
+                mimetype: req.file.mimetype,
+                size: req.file.size
+            } : 'No file'
+        });
+        next();
+    }, 
     validate(createRegistrationSchema), 
     registrationsController.create
 );
