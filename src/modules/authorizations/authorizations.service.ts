@@ -292,6 +292,95 @@ export class AuthorizationsService {
         });
     }
 
+    async updateHighRiskWork(id: string, data: UpdateHighRiskWorkDto) {
+        const record = await prisma.highRiskWorkAuth.findUnique({ where: { id } });
+        if (!record) throw new Error('Solicitud no encontrada');
+
+        const updateData: any = {
+            worker_id: data.worker_id,
+            worker_name: data.worker_name,
+            dni: data.dni,
+            company: data.company,
+            work_type: data.work_type,
+            location: data.location,
+            date_needed: data.date_needed ? new Date(data.date_needed) : undefined,
+            medical_cert_url: data.medical_cert_url,
+            training_cert_url: data.training_cert_url,
+        };
+
+        if (data.documents) {
+            let jsonPayload: any = {};
+            try { if (record.rejection_reason) jsonPayload = JSON.parse(record.rejection_reason); } catch { }
+            jsonPayload.documentos = data.documents;
+            updateData.rejection_reason = JSON.stringify(jsonPayload);
+        }
+
+        return prisma.highRiskWorkAuth.update({
+            where: { id },
+            data: updateData
+        });
+    }
+
+    async updateDrivingLicense(id: string, data: UpdateDrivingLicenseDto) {
+        const record = await prisma.drivingLicenseAuth.findUnique({ where: { id } });
+        if (!record) throw new Error('Solicitud no encontrada');
+
+        const updateData: any = {
+            worker_id: data.worker_id,
+            worker_name: data.worker_name,
+            dni: data.dni,
+            company: data.company,
+            license_number: data.license_number,
+            license_category: data.license_category,
+            expiration_date: data.expiration_date ? new Date(data.expiration_date) : undefined,
+            license_front_url: data.license_front_url,
+            license_back_url: data.license_back_url,
+        };
+
+        if (data.documents) {
+            let jsonPayload: any = {};
+            try { if (record.rejection_reason) jsonPayload = JSON.parse(record.rejection_reason); } catch { }
+            jsonPayload.documentos = data.documents;
+            updateData.rejection_reason = JSON.stringify(jsonPayload);
+        }
+
+        return prisma.drivingLicenseAuth.update({
+            where: { id },
+            data: updateData
+        });
+    }
+
+    async updateVehicle(id: string, data: UpdateVehicleDto) {
+        const record = await prisma.vehicleAccreditation.findUnique({ where: { id } });
+        if (!record) throw new Error('Solicitud no encontrada');
+
+        const updateData: any = {
+            plate_number: data.plate_number,
+            company: data.company,
+            vehicle_type: data.vehicle_type,
+            brand: data.brand,
+            model: data.model,
+            year: data.year,
+            soat_url: data.soat_url,
+            soat_expiration: data.soat_expiration ? new Date(data.soat_expiration) : undefined,
+            rtv_url: data.rtv_url,
+            rtv_expiration: data.rtv_expiration ? new Date(data.rtv_expiration) : undefined,
+            property_card_url: data.property_card_url,
+        };
+
+        if (data.documents) {
+            let jsonPayload: any = {};
+            try { if (record.rejection_reason) jsonPayload = JSON.parse(record.rejection_reason); } catch { }
+            jsonPayload.documentos = data.documents;
+            updateData.rejection_reason = JSON.stringify(jsonPayload);
+        }
+
+        return prisma.vehicleAccreditation.update({
+            where: { id },
+            data: updateData
+        });
+    }
+
     async updateHighRiskWorkDocuments(id: string, documents: any[]) {
         const record = await prisma.highRiskWorkAuth.findUnique({ where: { id } });
         if (!record) throw new Error('Solicitud no encontrada');

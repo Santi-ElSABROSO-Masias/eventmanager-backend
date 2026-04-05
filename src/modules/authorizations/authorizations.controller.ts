@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
 import { AuthorizationsService } from './authorizations.service';
-import { CreateHighRiskWorkDto, CreateDrivingLicenseDto, CreateVehicleDto, AuthApprovalDto } from './dto/authorizations.dto';
+import { 
+    CreateHighRiskWorkDto, UpdateHighRiskWorkDto,
+    CreateDrivingLicenseDto, UpdateDrivingLicenseDto,
+    CreateVehicleDto, UpdateVehicleDto,
+    AuthApprovalDto 
+} from './dto/authorizations.dto';
 import { createClient } from '@supabase/supabase-js';
 import { env } from '../../config/env';
 import { supabase } from '../../config/supabase';
@@ -204,6 +209,39 @@ export class AuthorizationsController {
             const id = req.params.id as string;
             const { documents } = req.body;
             const result = await this.authService.updateVehicleDocuments(id, documents);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
+
+    updateHighRiskWork = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id as string;
+            const data: UpdateHighRiskWorkDto = req.body;
+            const result = await this.authService.updateHighRiskWork(id, data);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
+
+    updateDrivingLicense = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id as string;
+            const data: UpdateDrivingLicenseDto = req.body;
+            const result = await this.authService.updateDrivingLicense(id, data);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
+
+    updateVehicle = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id as string;
+            const data: UpdateVehicleDto = req.body;
+            const result = await this.authService.updateVehicle(id, data);
             res.json({ success: true, data: result });
         } catch (error: any) {
             res.status(400).json({ success: false, message: error.message });

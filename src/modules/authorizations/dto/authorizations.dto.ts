@@ -69,7 +69,14 @@ export const authApprovalSchema = z.object({
     tiposTrabajo: z.array(z.string()).optional()
 });
 
+export const updateHighRiskWorkSchema = createHighRiskWorkSchema.partial();
+export const updateDrivingLicenseSchema = createDrivingLicenseSchema.partial();
+export const updateVehicleSchema = createVehicleSchema.partial();
+
 export type CreateHighRiskWorkDto = z.infer<typeof createHighRiskWorkSchema>;
+export type UpdateHighRiskWorkDto = z.infer<typeof updateHighRiskWorkSchema>;
 export type CreateDrivingLicenseDto = z.infer<typeof createDrivingLicenseSchema>;
+export type UpdateDrivingLicenseDto = z.infer<typeof updateDrivingLicenseSchema>;
 export type CreateVehicleDto = z.infer<typeof createVehicleSchema>;
+export type UpdateVehicleDto = z.infer<typeof updateVehicleSchema>;
 export type AuthApprovalDto = z.infer<typeof authApprovalSchema>;
