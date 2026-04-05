@@ -59,7 +59,14 @@ export class AuthorizationsController {
 
     getHighRiskWorks = async (req: Request, res: Response) => {
         try {
-            const filters = {}; // add req.query mapping
+            const userRole = (req as any).user?.role;
+            const userCompanyId = (req as any).user?.company_id;
+            
+            const filters: any = {};
+            if (userRole === 'admin_contratista' && userCompanyId) {
+                filters.company_id = userCompanyId;
+            }
+            
             const result = await this.authService.getHighRiskWorks(filters);
             res.json({ success: true, data: result });
         } catch (error: any) {
@@ -101,7 +108,14 @@ export class AuthorizationsController {
 
     getDrivingLicenses = async (req: Request, res: Response) => {
         try {
-            const filters = {};
+            const userRole = (req as any).user?.role;
+            const userCompanyId = (req as any).user?.company_id;
+            
+            const filters: any = {};
+            if (userRole === 'admin_contratista' && userCompanyId) {
+                filters.company_id = userCompanyId;
+            }
+            
             const result = await this.authService.getDrivingLicenses(filters);
             res.json({ success: true, data: result });
         } catch (error: any) {
@@ -135,7 +149,14 @@ export class AuthorizationsController {
 
     getVehicles = async (req: Request, res: Response) => {
         try {
-            const filters = {};
+            const userRole = (req as any).user?.role;
+            const userCompanyId = (req as any).user?.company_id;
+            
+            const filters: any = {};
+            if (userRole === 'admin_contratista' && userCompanyId) {
+                filters.company_id = userCompanyId;
+            }
+            
             const result = await this.authService.getVehicles(filters);
             res.json({ success: true, data: result });
         } catch (error: any) {

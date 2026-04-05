@@ -38,8 +38,11 @@ export class AuthorizationsService {
     }
 
     async getHighRiskWorks(filters: any) {
+        const where: any = {};
+        if (filters.company_id) where.company_id = filters.company_id;
+        
         return prisma.highRiskWorkAuth.findMany({
-            where: filters, // Should filter by company if it's 'admin_contratista'
+            where: where,
             orderBy: { date_requested: 'desc' },
             include: { requester: { select: { name: true } } }
         });
@@ -128,8 +131,11 @@ export class AuthorizationsService {
     }
 
     async getDrivingLicenses(filters: any) {
+        const where: any = {};
+        if (filters.company_id) where.company_id = filters.company_id;
+        
         return prisma.drivingLicenseAuth.findMany({
-            where: filters,
+            where: where,
             orderBy: { expiration_date: 'asc' },
         });
     }
@@ -170,8 +176,11 @@ export class AuthorizationsService {
     }
 
     async getVehicles(filters: any) {
+        const where: any = {};
+        if (filters.company_id) where.company_id = filters.company_id;
+        
         return prisma.vehicleAccreditation.findMany({
-            where: filters,
+            where: where,
         });
     }
 
