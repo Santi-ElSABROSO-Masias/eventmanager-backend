@@ -14,6 +14,10 @@ export const createHighRiskWorkSchema = z.object({
     rejection_reason: z.string().optional(),
     medical_cert_url: z.string().url().optional(),
     training_cert_url: z.string().url().optional(),
+    documents: z.array(z.object({
+        nombre: z.string(),
+        archivoUrl: z.string().optional()
+    })).optional(),
 });
 
 export const createDrivingLicenseSchema = z.object({
@@ -29,6 +33,10 @@ export const createDrivingLicenseSchema = z.object({
     rejection_reason: z.string().optional(),
     license_front_url: z.string().url().optional(),
     license_back_url: z.string().url().optional(),
+    documents: z.array(z.object({
+        nombre: z.string(),
+        archivoUrl: z.string().optional()
+    })).optional(),
 });
 
 export const createVehicleSchema = z.object({
@@ -46,6 +54,10 @@ export const createVehicleSchema = z.object({
     property_card_url: z.string().url().optional(),
     status: z.string().optional(),
     rejection_reason: z.string().optional(),
+    documents: z.array(z.object({
+        nombre: z.string(),
+        archivoUrl: z.string().optional()
+    })).optional(),
 });
 
 export const authApprovalSchema = z.object({

@@ -3,9 +3,24 @@ import { CreateHighRiskWorkDto, CreateDrivingLicenseDto, CreateVehicleDto, AuthA
 import { generateAuthorizationPDF } from './utils/pdfGenerator';
 import { randomUUID } from 'crypto';
 
+// --- Document Validation Helpers ---
+const validateDocuments = (documents: any[] | undefined, requiredCount: number, moduleName: string): void => {
+    if (!documents || documents.length === 0) {
+        throw new Error(`Documentación incompleta. Faltan ${requiredCount} documento(s) obligatorio(s). Por favor, sube todos los documentos requeridos para ${moduleName} antes de enviar.`);
+    }
+    
+    if (documents.length < requiredCount) {
+        const missing = requiredCount - documents.length;
+        throw new Error(`Documentación incompleta. Faltan ${missing} documento(s) obligatorio(s) de ${requiredCount}. Por favor, sube todos los documentos requeridos para ${moduleName} antes de enviar.`);
+    }
+};
+
 export class AuthorizationsService {
     // --- High Risk Work ---
     async createHighRiskWork(data: CreateHighRiskWorkDto, userId: string) {
+        // ✅ Validar documentos obligatorios para Trabajos de Alto Riesgo (mínimo 1)
+        validateDocuments(data.documents, 1, 'Trabajos de Alto Riesgo');
+        
         return prisma.highRiskWorkAuth.create({
             data: {
                 worker_id: data.worker_id,
@@ -93,6 +108,9 @@ export class AuthorizationsService {
 
     // --- Driving Licenses ---
     async createDrivingLicense(data: CreateDrivingLicenseDto, userId: string) {
+        // ✅ Validar documentos obligatorios para Licencias de Manejo (5 documentos base)
+        validateDocuments(data.documents, 5, 'Licencias de Manejo');
+        
         return prisma.drivingLicenseAuth.create({
             data: {
                 worker_id: data.worker_id,
@@ -130,6 +148,9 @@ export class AuthorizationsService {
 
     // --- Vehicle Accreditation ---
     async createVehicle(data: CreateVehicleDto, userId: string) {
+        // ✅ Validar documentos obligatorios para Acreditación Vehicular (4 documentos)
+        validateDocuments(data.documents, 4, 'Acreditación Vehicular');
+        
         return prisma.vehicleAccreditation.create({
             data: {
                 plate_number: data.plate_number,
