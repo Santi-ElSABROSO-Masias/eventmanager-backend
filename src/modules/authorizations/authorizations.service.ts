@@ -39,7 +39,7 @@ export class AuthorizationsService {
 
     async getHighRiskWorks(filters: any) {
         const where: any = {};
-        if (filters.company_id) where.company_id = filters.company_id;
+        if (filters.company) where.company = filters.company;
         
         return prisma.highRiskWorkAuth.findMany({
             where: where,
@@ -132,7 +132,7 @@ export class AuthorizationsService {
 
     async getDrivingLicenses(filters: any) {
         const where: any = {};
-        if (filters.company_id) where.company_id = filters.company_id;
+        if (filters.company) where.company = filters.company;
         
         return prisma.drivingLicenseAuth.findMany({
             where: where,
@@ -177,7 +177,7 @@ export class AuthorizationsService {
 
     async getVehicles(filters: any) {
         const where: any = {};
-        if (filters.company_id) where.company_id = filters.company_id;
+        if (filters.company) where.company = filters.company;
         
         return prisma.vehicleAccreditation.findMany({
             where: where,

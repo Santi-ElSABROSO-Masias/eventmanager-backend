@@ -60,11 +60,11 @@ export class AuthorizationsController {
     getHighRiskWorks = async (req: Request, res: Response) => {
         try {
             const userRole = (req as any).user?.role;
-            const userCompanyId = (req as any).user?.company_id;
+            const userCompanyId = (req as any).user?.companyId;
             
             const filters: any = {};
             if (userRole === 'admin_contratista' && userCompanyId) {
-                filters.company_id = userCompanyId;
+                filters.company = `Empresa ID: ${userCompanyId}`;
             }
             
             const result = await this.authService.getHighRiskWorks(filters);
@@ -109,11 +109,11 @@ export class AuthorizationsController {
     getDrivingLicenses = async (req: Request, res: Response) => {
         try {
             const userRole = (req as any).user?.role;
-            const userCompanyId = (req as any).user?.company_id;
+            const userCompanyId = (req as any).user?.companyId;
             
             const filters: any = {};
             if (userRole === 'admin_contratista' && userCompanyId) {
-                filters.company_id = userCompanyId;
+                filters.company = `Empresa ID: ${userCompanyId}`;
             }
             
             const result = await this.authService.getDrivingLicenses(filters);
@@ -150,11 +150,11 @@ export class AuthorizationsController {
     getVehicles = async (req: Request, res: Response) => {
         try {
             const userRole = (req as any).user?.role;
-            const userCompanyId = (req as any).user?.company_id;
+            const userCompanyId = (req as any).user?.companyId;
             
             const filters: any = {};
             if (userRole === 'admin_contratista' && userCompanyId) {
-                filters.company_id = userCompanyId;
+                filters.company = `Empresa ID: ${userCompanyId}`;
             }
             
             const result = await this.authService.getVehicles(filters);
