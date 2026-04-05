@@ -1,5 +1,10 @@
 import prisma from '../../config/db';
-import { CreateHighRiskWorkDto, CreateDrivingLicenseDto, CreateVehicleDto, AuthApprovalDto } from './dto/authorizations.dto';
+import { 
+    CreateHighRiskWorkDto, UpdateHighRiskWorkDto,
+    CreateDrivingLicenseDto, UpdateDrivingLicenseDto,
+    CreateVehicleDto, UpdateVehicleDto,
+    AuthApprovalDto 
+} from './dto/authorizations.dto';
 import { generateAuthorizationPDF } from './utils/pdfGenerator';
 import { randomUUID } from 'crypto';
 
