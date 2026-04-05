@@ -69,15 +69,23 @@ export class UsersService {
             throw new Error('Usuario no encontrado');
         }
 
+        // Preparar data para actualizar
+        const updateData: any = {};
+        if (data.email !== undefined) updateData.email = data.email;
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.role !== undefined) updateData.role = data.role;
+        if (data.companyId !== undefined) updateData.company_id = data.companyId;
+        if (data.is_active !== undefined) updateData.is_active = data.is_active;
+        
+        // Hash de contraseña si se proporciona
+        if (data.password) {
+            const hashedPassword = await hashPassword(data.password);
+            updateData.password_hash = hashedPassword;
+        }
+
         return prisma.user.update({
             where: { id },
-            data: {
-                email: data.email,
-                name: data.name,
-                role: data.role,
-                company_id: data.companyId,
-                is_active: data.is_active,
-            },
+            data: updateData,
             select: {
                 id: true,
                 email: true,
