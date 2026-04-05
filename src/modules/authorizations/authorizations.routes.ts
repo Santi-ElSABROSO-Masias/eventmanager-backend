@@ -38,6 +38,7 @@ router.get('/high-risk', authorize('super_super_admin', 'admin_contratista'), au
 router.put('/high-risk/:id/approve', authorize('super_admin', 'super_super_admin'), validate(authApprovalSchema), authController.approveHighRiskWork);
 router.put('/high-risk/:id', authorize('super_super_admin', 'super_admin', 'admin_contratista'), validate(updateHighRiskWorkSchema), authController.updateHighRiskWork);
 router.patch('/high-risk/:id/documents', authorize('super_super_admin', 'admin_contratista'), authController.updateHighRiskWorkDocuments);
+router.delete('/high-risk/:id', authorize('admin_contratista', 'super_admin', 'super_super_admin'), authController.deleteHighRiskWork);
 
 // --- Driving Licenses ---
 router.post('/driving-licenses', authorize('super_super_admin', 'admin_contratista'), validate(createDrivingLicenseSchema), authController.createDrivingLicense);
@@ -45,6 +46,7 @@ router.get('/driving-licenses', authorize('super_super_admin', 'admin_contratist
 router.put('/driving-licenses/:id/approve', authorize('super_admin', 'super_super_admin'), validate(authApprovalSchema), authController.approveDrivingLicense);
 router.put('/driving-licenses/:id', authorize('super_super_admin', 'super_admin', 'admin_contratista'), validate(updateDrivingLicenseSchema), authController.updateDrivingLicense);
 router.patch('/driving-licenses/:id/documents', authorize('super_super_admin', 'admin_contratista'), authController.updateDrivingLicenseDocuments);
+router.delete('/driving-licenses/:id', authorize('admin_contratista', 'super_admin', 'super_super_admin'), authController.deleteDrivingLicense);
 
 // --- Vehicle Accreditation ---
 router.post('/vehicles', authorize('super_super_admin', 'admin_contratista'), validate(createVehicleSchema), authController.createVehicle);
@@ -52,5 +54,6 @@ router.get('/vehicles', authorize('super_super_admin', 'admin_contratista'), aut
 router.put('/vehicles/:id/approve', authorize('super_admin', 'super_super_admin'), validate(authApprovalSchema), authController.approveVehicle);
 router.put('/vehicles/:id', authorize('super_super_admin', 'super_admin', 'admin_contratista'), validate(updateVehicleSchema), authController.updateVehicle);
 router.patch('/vehicles/:id/documents', authorize('super_super_admin', 'admin_contratista'), authController.updateVehicleDocuments);
+router.delete('/vehicles/:id', authorize('admin_contratista', 'super_admin', 'super_super_admin'), authController.deleteVehicle);
 
 export default router;

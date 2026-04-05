@@ -1,4 +1,5 @@
 import prisma from '../../config/db';
+import { supabase } from '../../config/supabase';
 import { 
     CreateHighRiskWorkDto, UpdateHighRiskWorkDto,
     CreateDrivingLicenseDto, UpdateDrivingLicenseDto,
@@ -442,5 +443,69 @@ export class AuthorizationsService {
         });
 
         return updated;
+    }
+
+    // --- Helper: Extract storage paths from document URLs ---
+    private extractStoragePaths(rejectionReason: string | null): string[] {
+        if (!rejectionReason) return [];
+        try {
+            const parsed = JSON.parse(rejectionReason);
+            const documentos = parsed.documentos || [];
+            const paths: string[] = [];
+            for (const doc of documentos) {
+                if (doc.archivoUrl && typeof doc.archivoUrl === 'string') {
+                    // URL format: .../storage/v1/object/public/autorizaciones/Category/filename.pdf
+                    const marker = '/autorizaciones/';
+                    const idx = doc.archivoUrl.indexOf(marker);
+                    if (idx !== -1) {
+                        paths.push(doc.archivoUrl.substring(idx + marker.length));
+                    }
+                }
+            }
+            return paths;
+        } catch {
+            return [];
+        }
+    }
+
+    private async deleteStorageFiles(paths: string[]): Promise<void> {
+        if (paths.length === 0) return;
+        console.log('[AuthorizationsService] Eliminando archivos de Storage:', paths);
+        const { error } = await supabase.storage.from('autorizaciones').remove(paths);
+        if (error) {
+            console.error('[AuthorizationsService] Error al eliminar archivos de Storage:', error.message);
+            // No lanzamos error para no bloquear la eliminación del registro
+        }
+    }
+
+    // --- Delete Methods ---
+    async deleteHighRiskWork(id: string) {
+        const record = await prisma.highRiskWorkAuth.findUnique({ where: { id } });
+        if (!record) throw new Error('Solicitud no encontrada');
+
+        const storagePaths = this.extractStoragePaths(record.rejection_reason);
+        await this.deleteStorageFiles(storagePaths);
+
+        return prisma.highRiskWorkAuth.delete({ where: { id } });
+    }
+
+    async deleteDrivingLicense(id: string) {
+        const record = await prisma.drivingLicenseAuth.findUnique({ where: { id } });
+        if (!record) throw new Error('Solicitud no encontrada');
+
+        const storagePaths = this.extractStoragePaths(record.rejection_reason);
+        await this.deleteStorageFiles(storagePaths);
+
+        return prisma.drivingLicenseAuth.delete({ where: { id } });
+    }
+
+    async deleteVehicle(id: string) {
+        const record = await prisma.vehicleAccreditation.findUnique({ where: { id } });
+        if (!record) throw new Error('Solicitud no encontrada');
+
+        const storagePaths = this.extractStoragePaths(record.rejection_reason);
+        await this.deleteStorageFiles(storagePaths);
+
+        return prisma.vehicleAccreditation.delete({ where: { id } });
     }
 }

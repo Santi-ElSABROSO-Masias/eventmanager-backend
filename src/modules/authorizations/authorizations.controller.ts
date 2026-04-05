@@ -247,4 +247,35 @@ export class AuthorizationsController {
             res.status(400).json({ success: false, message: error.message });
         }
     };
+
+    // --- Delete Methods ---
+    deleteHighRiskWork = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id as string;
+            await this.authService.deleteHighRiskWork(id);
+            res.json({ success: true, message: 'Solicitud eliminada exitosamente' });
+        } catch (error: any) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
+
+    deleteDrivingLicense = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id as string;
+            await this.authService.deleteDrivingLicense(id);
+            res.json({ success: true, message: 'Solicitud eliminada exitosamente' });
+        } catch (error: any) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
+
+    deleteVehicle = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id as string;
+            await this.authService.deleteVehicle(id);
+            res.json({ success: true, message: 'Solicitud eliminada exitosamente' });
+        } catch (error: any) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
 }
