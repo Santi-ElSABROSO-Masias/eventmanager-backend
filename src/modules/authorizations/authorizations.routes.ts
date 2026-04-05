@@ -31,15 +31,18 @@ router.post('/upload', authorize('super_super_admin', 'admin_contratista'), uplo
 router.post('/high-risk', authorize('super_super_admin', 'admin_contratista'), validate(createHighRiskWorkSchema), authController.createHighRiskWork);
 router.get('/high-risk', authorize('super_super_admin', 'admin_contratista'), authController.getHighRiskWorks);
 router.put('/high-risk/:id/approve', authorize('super_admin', 'super_super_admin'), validate(authApprovalSchema), authController.approveHighRiskWork);
+router.patch('/high-risk/:id/documents', authorize('super_super_admin', 'admin_contratista'), authController.updateHighRiskWorkDocuments);
 
 // --- Driving Licenses ---
 router.post('/driving-licenses', authorize('super_super_admin', 'admin_contratista'), validate(createDrivingLicenseSchema), authController.createDrivingLicense);
 router.get('/driving-licenses', authorize('super_super_admin', 'admin_contratista'), authController.getDrivingLicenses);
 router.put('/driving-licenses/:id/approve', authorize('super_admin', 'super_super_admin'), validate(authApprovalSchema), authController.approveDrivingLicense);
+router.patch('/driving-licenses/:id/documents', authorize('super_super_admin', 'admin_contratista'), authController.updateDrivingLicenseDocuments);
 
 // --- Vehicle Accreditation ---
 router.post('/vehicles', authorize('super_super_admin', 'admin_contratista'), validate(createVehicleSchema), authController.createVehicle);
 router.get('/vehicles', authorize('super_super_admin', 'admin_contratista'), authController.getVehicles);
 router.put('/vehicles/:id/approve', authorize('super_admin', 'super_super_admin'), validate(authApprovalSchema), authController.approveVehicle);
+router.patch('/vehicles/:id/documents', authorize('super_super_admin', 'admin_contratista'), authController.updateVehicleDocuments);
 
 export default router;

@@ -195,4 +195,62 @@ export class AuthorizationsService {
             }
         });
     }
+
+    async updateHighRiskWorkDocuments(id: string, documents: any[]) {
+        const record = await prisma.highRiskWorkAuth.findUnique({ where: { id } });
+        if (!record) throw new Error('Solicitud no encontrada');
+
+        // Actualizar rejection_reason (que contiene los datos extendidos incluyendo documentos)
+        let jsonPayload: any = {};
+        try { if (record.rejection_reason) jsonPayload = JSON.parse(record.rejection_reason); } catch { }
+
+        jsonPayload.documentos = documents;
+
+        const updated = await prisma.highRiskWorkAuth.update({
+            where: { id },
+            data: {
+                rejection_reason: JSON.stringify(jsonPayload)
+            }
+        });
+
+        return updated;
+    }
+
+    async updateDrivingLicenseDocuments(id: string, documents: any[]) {
+        const record = await prisma.drivingLicenseAuth.findUnique({ where: { id } });
+        if (!record) throw new Error('Solicitud no encontrada');
+
+        let jsonPayload: any = {};
+        try { if (record.rejection_reason) jsonPayload = JSON.parse(record.rejection_reason); } catch { }
+
+        jsonPayload.documentos = documents;
+
+        const updated = await prisma.drivingLicenseAuth.update({
+            where: { id },
+            data: {
+                rejection_reason: JSON.stringify(jsonPayload)
+            }
+        });
+
+        return updated;
+    }
+
+    async updateVehicleDocuments(id: string, documents: any[]) {
+        const record = await prisma.vehicleAccreditation.findUnique({ where: { id } });
+        if (!record) throw new Error('Solicitud no encontrada');
+
+        let jsonPayload: any = {};
+        try { if (record.rejection_reason) jsonPayload = JSON.parse(record.rejection_reason); } catch { }
+
+        jsonPayload.documentos = documents;
+
+        const updated = await prisma.vehicleAccreditation.update({
+            where: { id },
+            data: {
+                rejection_reason: JSON.stringify(jsonPayload)
+            }
+        });
+
+        return updated;
+    }
 }

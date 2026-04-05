@@ -175,4 +175,38 @@ export class AuthorizationsController {
             res.status(400).json({ success: false, message: error.message });
         }
     };
+
+    // --- Update Documents ---
+    updateHighRiskWorkDocuments = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id as string;
+            const { documents } = req.body;
+            const result = await this.authService.updateHighRiskWorkDocuments(id, documents);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
+
+    updateDrivingLicenseDocuments = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id as string;
+            const { documents } = req.body;
+            const result = await this.authService.updateDrivingLicenseDocuments(id, documents);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
+
+    updateVehicleDocuments = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id as string;
+            const { documents } = req.body;
+            const result = await this.authService.updateVehicleDocuments(id, documents);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    };
 }
