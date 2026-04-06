@@ -125,6 +125,29 @@ export class RegistrationsService {
             }
         });
 
+        // 📧 Notificación de Confirmación de Registro
+        const confirmSubject = `Confirmación de Inscripción - ${training.title}`;
+        const confirmHtml = `
+            <div style="font-family: Arial, sans-serif; color: #334155;">
+              <h3 style="color:#10b981;">📝 Registro Confirmado</h3>
+              <p>Hola, el trabajador <strong>${registration.full_name}</strong> ha sido inscrito exitosamente en la capacitación <strong>${training.title}</strong>.</p>
+              <ul>
+                <li>Fecha del curso: <strong>${training.start_date.toISOString().split('T')[0]}</strong></li>
+              </ul>
+              <p>Se enviará el link de acceso una vez aprobado por la Gerencia SSO.</p>
+            </div>
+        `;
+
+        try {
+            await sendSystemNotification(registration.email, confirmSubject, confirmHtml, {
+                type: 'registration_confirmed',
+                trainingId: training.id
+                // No asociamos userId porque el trabajador no suele tener cuenta de usuario en el sistema
+            });
+        } catch (error) {
+            console.error('Error sending registration_confirmed notification:', error);
+        }
+
         const newRegisteredCount = training._count.registrations + 1;
         const remainingSlots = training.max_capacity - newRegisteredCount;
         if (remainingSlots < 5) {
@@ -138,7 +161,7 @@ export class RegistrationsService {
             if (!existingCriticalAlert) {
                 const gerenciaUsers = await prisma.user.findMany({
                     where: { role: 'super_super_admin', is_active: true },
-                    select: { email: true, name: true }
+                    select: { id: true, email: true, name: true }
                 });
 
                 const subject = `⚠️ Alerta de cupos críticos - ${training.title}`;
@@ -150,31 +173,14 @@ export class RegistrationsService {
                     </div>
                 `;
 
-                for (const user of gerenciaUsers) {
+                for (const gerenciaUser of gerenciaUsers) {
                     try {
-                        await sendSystemNotification(user.email, subject, html);
-                        await prisma.systemNotification.create({
-                            data: {
-                                training_id: training.id,
-                                type: 'critical_capacity_alert',
-                                status: 'sent',
-                                recipient_email: user.email,
-                                subject,
-                                body_html: html,
-                                sent_at: new Date()
-                            }
+                        await sendSystemNotification(gerenciaUser.email, subject, html, {
+                            type: 'critical_capacity_alert',
+                            trainingId: training.id,
+                            userId: gerenciaUser.id
                         });
                     } catch (error) {
-                        await prisma.systemNotification.create({
-                            data: {
-                                training_id: training.id,
-                                type: 'critical_capacity_alert',
-                                status: 'failed',
-                                recipient_email: user.email,
-                                subject,
-                                body_html: html
-                            }
-                        });
                         console.error('Error sending critical_capacity_alert notification:', error);
                     }
                 }
@@ -193,15 +199,38 @@ export class RegistrationsService {
 
         // Nivel 2 (Capacitador / Super Admin Nivel 2) validates the identity documents
         if (status === 'rechazado') {
-            return prisma.registration.update({
+            const updated = await prisma.registration.update({
                 where: { id },
                 data: {
                     status: 'rechazado',
                     rejection_reason: rejectionReason,
                     approved_by_level2: userId,
                     approved_at_level2: new Date()
-                }
+                },
+                include: { training: true }
             });
+
+            // 📧 Notificación de Rechazo
+            const subject = `❌ Inscripción Observada/Rechazada - ${updated.training.title}`;
+            const html = `
+                <div style="font-family: Arial, sans-serif; color: #334155;">
+                  <h3 style="color:#ef4444;">❌ Inscripción Observada</h3>
+                  <p>Hola, tu inscripción para la capacitación <strong>${updated.training.title}</strong> ha sido observada o rechazada.</p>
+                  <p>Motivo: <strong>${rejectionReason || 'Documentación no válida o incompleta'}</strong></p>
+                  <p>Por favor, contacta con tu supervisor para regularizar tu situación.</p>
+                </div>
+            `;
+
+            try {
+                await sendSystemNotification(updated.email, subject, html, {
+                    type: 'registration_confirmed', // Reutilizamos el tipo para el registro de auditoría si no hay uno específico
+                    trainingId: updated.training_id
+                });
+            } catch (error) {
+                console.error('Error sending rejection notification:', error);
+            }
+
+            return updated;
         }
 
         return prisma.registration.update({
@@ -234,7 +263,7 @@ export class RegistrationsService {
               }
             : {};
 
-        return prisma.registration.update({
+        const updated = await prisma.registration.update({
             where: { id },
             data: {
                 status: 'aprobado',
@@ -242,8 +271,34 @@ export class RegistrationsService {
                 approved_at_level1: now,
                 ...(meetingLink && { meeting_link: meetingLink }),
                 ...level2AutoData,
-            }
+            },
+            include: { training: true }
         });
+
+        // 📧 Notificación de Aprobación Final
+        const subject = `✅ Inscripción Confirmada y Aprobada - ${updated.training.title}`;
+        const html = `
+            <div style="font-family: Arial, sans-serif; color: #334155;">
+              <h3 style="color:#10b981;">✅ ¡Felicidades! Inscripción Aprobada</h3>
+              <p>Tu inscripción para <strong>${updated.training.title}</strong> ha sido aprobada por la Gerencia SSO.</p>
+              ${updated.meeting_link ? `<p>Link de acceso virtual: <a href="${updated.meeting_link}">${updated.meeting_link}</a></p>` : '<p>La capacitación será presencial. Por favor asiste puntual.</p>'}
+              <ul>
+                <li>Fecha: <strong>${updated.training.start_date.toISOString().split('T')[0]}</strong></li>
+              </ul>
+              <p>Te esperamos.</p>
+            </div>
+        `;
+
+        try {
+            await sendSystemNotification(updated.email, subject, html, {
+                type: 'registration_confirmed',
+                trainingId: updated.training_id
+            });
+        } catch (error) {
+            console.error('Error sending final approval notification:', error);
+        }
+
+        return updated;
     }
 
     async findAll(filters: any) {

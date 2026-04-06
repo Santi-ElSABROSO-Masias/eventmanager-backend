@@ -71,6 +71,12 @@ enum SystemNotificationType {
   new_training_published
   critical_capacity_alert
   duplicated_worker_alert
+  reminder_7d
+  deadline_warning
+  registration_closed
+  consolidation_ready
+  course_opened
+  registration_confirmed
 }
 
 enum SystemNotificationStatus {
@@ -392,10 +398,14 @@ model SystemNotification {
   subject         String                   @db.VarChar(255)
   body_html       String                   @db.Text
   sent_at         DateTime?                @db.Timestamp()
+  read_at         DateTime?                @db.Timestamp()
+  user_id         String?                  @db.Uuid
+  authorization_id String?                 @db.Uuid
   created_at      DateTime                 @default(now()) @db.Timestamp()
 
   @@index([training_id, type])
   @@index([recipient_email])
+  @@index([user_id])
   @@map("system_notifications")
 }
 

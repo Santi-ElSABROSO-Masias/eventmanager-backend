@@ -103,7 +103,7 @@ export class TrainingsService {
                 try {
                     const contractorAdmins = await prisma.user.findMany({
                         where: { role: 'admin_contratista', is_active: true },
-                        select: { email: true, name: true }
+                        select: { id: true, email: true, name: true }
                     });
 
                     for (const admin of contractorAdmins) {
@@ -118,29 +118,12 @@ export class TrainingsService {
                         `;
 
                         try {
-                            await sendSystemNotification(admin.email, subject, html);
-                            await prisma.systemNotification.create({
-                                data: {
-                                    training_id: updatedTraining.id,
-                                    type: 'new_training_published',
-                                    status: 'sent',
-                                    recipient_email: admin.email,
-                                    subject,
-                                    body_html: html,
-                                    sent_at: new Date()
-                                }
+                            await sendSystemNotification(admin.email, subject, html, {
+                                type: 'new_training_published',
+                                trainingId: updatedTraining.id,
+                                userId: admin.id
                             });
                         } catch (error) {
-                            await prisma.systemNotification.create({
-                                data: {
-                                    training_id: updatedTraining.id,
-                                    type: 'new_training_published',
-                                    status: 'failed',
-                                    recipient_email: admin.email,
-                                    subject,
-                                    body_html: html
-                                }
-                            });
                             console.error('Error sending new_training_published notification:', error);
                         }
                     }

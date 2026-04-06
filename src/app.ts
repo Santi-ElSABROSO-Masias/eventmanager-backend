@@ -41,6 +41,7 @@ import examsRoutes from './modules/exams/exams.routes';
 import authorizationsRoutes from './modules/authorizations/authorizations.routes';
 import externalRoutes from './modules/external/external.routes';
 import uploadRoutes from './modules/upload/upload.routes';
+import notificationsRoutes from './modules/notifications/notifications.routes';
 
 // Import and use routes here
 app.use('/api/auth', authRoutes);
@@ -54,6 +55,7 @@ app.use('/api/exams', examsRoutes);
 app.use('/api/authorizations', authorizationsRoutes);
 app.use('/api/external', externalRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 import multer from 'multer';
 
