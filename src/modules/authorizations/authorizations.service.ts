@@ -309,7 +309,6 @@ export class AuthorizationsService {
             worker_id: data.worker_id,
             worker_name: data.worker_name,
             dni: data.dni,
-            company: data.company,
             work_type: data.work_type,
             location: data.location,
             date_needed: data.date_needed ? new Date(data.date_needed) : undefined,
@@ -340,7 +339,6 @@ export class AuthorizationsService {
             worker_id: data.worker_id,
             worker_name: data.worker_name,
             dni: data.dni,
-            company: data.company,
             license_number: data.license_number,
             license_category: data.license_category,
             expiration_date: data.expiration_date ? new Date(data.expiration_date) : undefined,
@@ -369,7 +367,6 @@ export class AuthorizationsService {
 
         const updateData: any = {
             plate_number: data.plate_number,
-            company: data.company,
             vehicle_type: data.vehicle_type,
             brand: data.brand,
             model: data.model,
