@@ -26,7 +26,7 @@ export const getNotifications = async (req: Request, res: Response) => {
 
 export const markAsRead = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const userId = (req as any).user?.id;
 
         if (!userId) {
