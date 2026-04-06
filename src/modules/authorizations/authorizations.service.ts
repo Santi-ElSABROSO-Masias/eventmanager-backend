@@ -317,7 +317,9 @@ export class AuthorizationsService {
             training_cert_url: data.training_cert_url,
         };
 
-        if (data.documents) {
+        if (data.rejection_reason) {
+            updateData.rejection_reason = data.rejection_reason;
+        } else if (data.documents) {
             let jsonPayload: any = {};
             try { if (record.rejection_reason) jsonPayload = JSON.parse(record.rejection_reason); } catch { }
             jsonPayload.documentos = data.documents;
@@ -346,7 +348,9 @@ export class AuthorizationsService {
             license_back_url: data.license_back_url,
         };
 
-        if (data.documents) {
+        if (data.rejection_reason) {
+            updateData.rejection_reason = data.rejection_reason;
+        } else if (data.documents) {
             let jsonPayload: any = {};
             try { if (record.rejection_reason) jsonPayload = JSON.parse(record.rejection_reason); } catch { }
             jsonPayload.documentos = data.documents;
@@ -377,7 +381,9 @@ export class AuthorizationsService {
             property_card_url: data.property_card_url,
         };
 
-        if (data.documents) {
+        if (data.rejection_reason) {
+            updateData.rejection_reason = data.rejection_reason;
+        } else if (data.documents) {
             let jsonPayload: any = {};
             try { if (record.rejection_reason) jsonPayload = JSON.parse(record.rejection_reason); } catch { }
             jsonPayload.documentos = data.documents;
