@@ -148,6 +148,29 @@ export class RegistrationsService {
             console.error('Error sending registration_confirmed notification:', error);
         }
 
+        // 🔔 [Grupo 2] Notificación a Gerencia SSO
+        this.getGerenciaEmails().then(emails => {
+            emails.forEach(email => {
+                this.dispatchNotification(
+                    email,
+                    `Nueva Solicitud de Inscripción - ${training.title}`,
+                    `
+                    <div style="font-family: Arial, sans-serif; color: #334155;">
+                      <h3 style="color:#2563eb;">🚀 Nueva Solicitud de Inscripción</h3>
+                      <p>Se ha recibido una nueva solicitud para la capacitación: <strong>${training.title}</strong></p>
+                      <ul>
+                        <li>Trabajador: <strong>${registration.full_name}</strong></li>
+                        <li>DNI: <strong>${registration.dni}</strong></li>
+                        <li>Empresa: <strong>${registration.organization}</strong></li>
+                      </ul>
+                      <p>Por favor, ingrese al sistema para validar los documentos.</p>
+                    </div>
+                    `,
+                    { type: 'new_registration', trainingId: training.id }
+                );
+            });
+        });
+
         const newRegisteredCount = training._count.registrations + 1;
         const remainingSlots = training.max_capacity - newRegisteredCount;
         if (remainingSlots < 5) {
@@ -230,6 +253,26 @@ export class RegistrationsService {
                 console.error('Error sending rejection notification:', error);
             }
 
+            // 🔔 [Grupo 2] Notificación al Contratista (Rechazo)
+            this.getContractorEmails(updated).then(emails => {
+                emails.forEach(email => {
+                    this.dispatchNotification(
+                        email,
+                        `Inscripción Observada/Rechazada - ${updated.training.title}`,
+                        `
+                        <div style="font-family: Arial, sans-serif; color: #334155;">
+                          <h3 style="color:#ef4444;">❌ Solicitud Observada</h3>
+                          <p>La solicitud de inscripción para <strong>${updated.full_name}</strong> ha sido observada o rechazada por la Gerencia SSO.</p>
+                          <p>Empresa: <strong>${updated.organization}</strong></p>
+                          <p>Motivo: <strong>${rejectionReason || 'Documentación no válida o incompleta'}</strong></p>
+                          <p>Por favor, revise la plataforma para realizar las correcciones necesarias.</p>
+                        </div>
+                        `,
+                        { type: 'registration_rejected', trainingId: updated.training_id }
+                    );
+                });
+            });
+
             return updated;
         }
 
@@ -297,6 +340,25 @@ export class RegistrationsService {
         } catch (error) {
             console.error('Error sending final approval notification:', error);
         }
+
+        // 🔔 [Grupo 2] Notificación al Contratista (Aprobación Final)
+        this.getContractorEmails(updated).then(emails => {
+            emails.forEach(email => {
+                this.dispatchNotification(
+                    email,
+                    `Inscripción Aprobada - ${updated.training.title}`,
+                    `
+                    <div style="font-family: Arial, sans-serif; color: #334155;">
+                      <h3 style="color:#10b981;">✅ Inscripción Aprobada</h3>
+                      <p>La solicitud para <strong>${updated.full_name}</strong> ha sido aprobada satisfactoriamente por la Gerencia SSO.</p>
+                      <p>Empresa: <strong>${updated.organization}</strong></p>
+                      <p>El trabajador ya puede participar en la capacitación programada para el <strong>${updated.training.start_date.toISOString().split('T')[0]}</strong>.</p>
+                    </div>
+                    `,
+                    { type: 'registration_confirmed', trainingId: updated.training_id }
+                );
+            });
+        });
 
         return updated;
     }
@@ -411,5 +473,54 @@ export class RegistrationsService {
                 ...(data.phone && { phone: data.phone }),
             }
         });
+    }
+
+    // --- Métodos Privados de Notificación (Grupo 2) ---
+
+    private dispatchNotification(to: string, subject: string, html: string, metadata?: any) {
+        // Ejecución "Fire-and-Forget": No bloqueamos el hilo principal nor la transacción principal.
+        // Try/catch interno obligatorio para estabilidad del proceso.
+        sendSystemNotification(to, subject, html, metadata).catch((err) => {
+            console.error(`[AsyncTask] Error enviando notificación asíncrona a ${to}:`, err);
+        });
+    }
+
+    private async getGerenciaEmails(): Promise<string[]> {
+        const envEmail = process.env.SSO_GERENCIA_EMAIL;
+        if (envEmail) return envEmail.split(','); // Soporta listas separadas por comas
+
+        const admins = await prisma.user.findMany({
+            where: { role: 'super_super_admin', is_active: true },
+            select: { email: true }
+        });
+        return admins.map(a => a.email);
+    }
+
+    private async getContractorEmails(registration: any): Promise<string[]> {
+        const emails = new Set<string>();
+        
+        // 1. Buscar empresa por nombre (organization)
+        const company = await prisma.company.findFirst({
+            where: { name: { equals: registration.organization, mode: 'insensitive' } },
+            include: { users: { where: { role: 'admin_contratista', is_active: true } } }
+        });
+
+        if (company) {
+            if (company.contact_email) emails.add(company.contact_email);
+            company.users.forEach(u => emails.add(u.email));
+        }
+
+        // 2. Fallback al creador si es contratista o no se encontró empresa
+        if (registration.registered_by) {
+            const creator = await prisma.user.findUnique({
+                where: { id: registration.registered_by },
+                select: { email: true, role: true }
+            });
+            if (creator && creator.role === 'admin_contratista') {
+                emails.add(creator.email);
+            }
+        }
+
+        return Array.from(emails);
     }
 }

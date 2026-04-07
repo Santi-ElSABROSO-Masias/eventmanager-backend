@@ -77,6 +77,8 @@ enum SystemNotificationType {
   consolidation_ready
   course_opened
   registration_confirmed
+  new_registration
+  registration_rejected
 }
 
 enum SystemNotificationStatus {
