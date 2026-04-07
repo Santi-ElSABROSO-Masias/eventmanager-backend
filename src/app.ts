@@ -43,6 +43,7 @@ import externalRoutes from './modules/external/external.routes';
 import uploadRoutes from './modules/upload/upload.routes';
 import notificationsRoutes from './modules/notifications/notifications.routes';
 
+
 // Import and use routes here
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
