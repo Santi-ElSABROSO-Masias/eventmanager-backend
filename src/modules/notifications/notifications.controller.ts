@@ -10,7 +10,7 @@ export class NotificationsController {
      * 1. Header explicito 'user-email' remitido por el frontend.
      * 2. Busqueda en DB mediante el ID presente en el JWT decodificado.
      */
-    private async getUserEmail(req: Request): Promise<string | null> {
+    private getUserEmail = async (req: Request): Promise<string | null> => {
         // Prioridad 1: Header
         const headerEmail = req.headers['user-email'];
         if (headerEmail) {
@@ -33,9 +33,9 @@ export class NotificationsController {
         }
 
         return null;
-    }
+    };
 
-    async getHistorial(req: Request, res: Response) {
+    getHistorial = async (req: Request, res: Response) => {
         try {
             const userEmail = await this.getUserEmail(req);
             
@@ -49,9 +49,9 @@ export class NotificationsController {
             console.error('[NotificationsController] Error getHistorial:', error);
             return res.status(500).json({ error: 'Error interno al obtener notificaciones' });
         }
-    }
+    };
 
-    async markAsRead(req: Request, res: Response) {
+    markAsRead = async (req: Request, res: Response) => {
         try {
             const userEmail = await this.getUserEmail(req);
             const { id } = req.params;
@@ -69,5 +69,5 @@ export class NotificationsController {
             }
             return res.status(500).json({ error: 'Error interno al actualizar la notificación' });
         }
-    }
+    };
 }

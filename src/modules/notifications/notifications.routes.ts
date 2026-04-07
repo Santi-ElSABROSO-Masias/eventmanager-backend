@@ -8,7 +8,7 @@ const notificationsController = new NotificationsController();
 // Aquí inyectamos el middleware de autenticación para asegurar 'req.user'
 router.use(authenticate);
 
-router.get('/', notificationsController.getHistorial.bind(notificationsController));
-router.patch('/:id/read', notificationsController.markAsRead.bind(notificationsController));
+router.get('/', notificationsController.getHistorial);
+router.patch('/:id/read', notificationsController.markAsRead);
 
 export default router;
